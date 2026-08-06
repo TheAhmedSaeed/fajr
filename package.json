@@ -1,0 +1,35 @@
+{
+  "name": "fajr",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Group accountability and gamification for praying Fajr on time.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TheAhmedSaeed/fajr.git"
+  },
+  "license": "MIT",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "test": "tsc -p tsconfig.test.json --noCheck && node scripts/prepare-tests.mjs && node --test tests/*.test.mjs"
+  },
+  "dependencies": {
+    "@supabase/ssr": "^0.12.4",
+    "@supabase/supabase-js": "^2.112.1",
+    "adhan": "^4.4.4",
+    "next": "^16.3.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.3",
+    "@types/node": "^26.1.2",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
+    "postcss": "^8.5.26",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^7.0.2"
+  }
+}
