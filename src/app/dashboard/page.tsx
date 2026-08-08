@@ -131,7 +131,7 @@ export default async function Dashboard() {
         )}
       </section>
 
-      <GroupForms locale={locale} />
+      <GroupForms locale={locale} defaultOpen={groups.length === 0} />
 
       <BadgeGrid badges={badgesFor(stats)} t={t} />
     </div>

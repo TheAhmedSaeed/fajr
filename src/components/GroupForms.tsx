@@ -5,14 +5,52 @@ import { createGroup, joinGroup, type ActionResult } from "@/app/actions";
 import { Notice, SubmitButton } from "./ui";
 import { getDict, type Locale } from "@/lib/i18n";
 
-export function GroupForms({ locale }: { locale: Locale }) {
+/**
+ * `defaultOpen` is false once the user already belongs to a group: at that
+ * point this is a rarely-used action, and leaving a two-field form permanently
+ * expanded pushes the parts of the dashboard that matter daily further down.
+ */
+export function GroupForms({
+  locale,
+  defaultOpen = true,
+}: {
+  locale: Locale;
+  defaultOpen?: boolean;
+}) {
   const t = getDict(locale);
+  const [open, setOpen] = useState(defaultOpen);
   const [tab, setTab] = useState<"create" | "join">("create");
   const [createState, createAction] = useActionState<ActionResult | null, FormData>(createGroup, null);
   const [joinState, joinAction] = useActionState<ActionResult | null, FormData>(joinGroup, null);
 
+  const collapsible = !defaultOpen;
+
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="w-full rounded-xl border border-dashed border-line px-4 py-3 text-sm text-muted transition hover:border-gold/40 hover:text-ink"
+      >
+        + {t.groupForms.addMore}
+      </button>
+    );
+  }
+
   return (
     <section className="card p-5">
+      {collapsible && (
+        <div className="mb-3 flex justify-end">
+          <button
+            type="button"
+            onClick={() => setOpen(false)}
+            className="text-xs text-muted underline underline-offset-2 hover:text-ink"
+          >
+            {t.groupForms.close}
+          </button>
+        </div>
+      )}
+
       <div className="flex gap-1 rounded-xl border border-line bg-night/60 p-1">
         {(["create", "join"] as const).map((tab_) => (
           <button

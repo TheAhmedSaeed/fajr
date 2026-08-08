@@ -208,6 +208,8 @@ const ar = {
   },
 
   groupForms: {
+    addMore: "أنشئ مجموعة أخرى أو انضم برمز",
+    close: "إغلاق",
     createTab: "أنشئ مجموعة",
     joinTab: "انضم برمز",
     nameLabel: "اسم المجموعة",
@@ -511,6 +513,8 @@ const en: Dict = {
   },
 
   groupForms: {
+    addMore: "Create another group or join with a code",
+    close: "Close",
     createTab: "Create a group",
     joinTab: "Join with a code",
     nameLabel: "Group name",
