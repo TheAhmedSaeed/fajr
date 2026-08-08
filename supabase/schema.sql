@@ -21,6 +21,11 @@ create table if not exists public.profiles (
   created_at         timestamptz not null default now()
 );
 
+-- Added after the first release: remembers which bundled city was picked so the
+-- name can be shown in the reader's own language. Free-text `city_label` stays
+-- as the fallback for pinned coordinates.
+alter table public.profiles add column if not exists city_id text;
+
 comment on column public.profiles.timezone is
   'IANA timezone. Every calendar-day boundary for this user is derived from it.';
 

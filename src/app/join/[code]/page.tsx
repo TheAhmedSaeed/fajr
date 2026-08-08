@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getProfile, isOnboarded } from "@/lib/data";
+import { getT } from "@/lib/locale";
 import { JoinButton } from "./JoinButton";
 
 export const dynamic = "force-dynamic";
@@ -14,6 +15,7 @@ export const dynamic = "force-dynamic";
 export default async function JoinPage({ params }: { params: Promise<{ code: string }> }) {
   const { code } = await params;
   const normalized = code.trim().toUpperCase();
+  const { locale, t } = await getT();
 
   const admin = createAdminClient();
   const { data: group } = await admin
@@ -26,15 +28,13 @@ export default async function JoinPage({ params }: { params: Promise<{ code: str
     return (
       <div className="mx-auto max-w-md py-16 text-center">
         <p className="text-4xl">🌑</p>
-        <h1 className="mt-4 text-xl font-bold">This invite doesn&rsquo;t work</h1>
-        <p className="mt-2 text-sm text-muted">
-          The code may have been mistyped, or the group was deleted.
-        </p>
+        <h1 className="mt-4 text-xl font-bold">{t.join.badTitle}</h1>
+        <p className="mt-2 text-sm text-muted">{t.join.badBody}</p>
         <Link
           href="/"
           className="mt-6 inline-block rounded-xl border border-line px-4 py-2.5 text-sm hover:bg-surface-2"
         >
-          Go home
+          {t.join.goHome}
         </Link>
       </div>
     );
@@ -65,29 +65,24 @@ export default async function JoinPage({ params }: { params: Promise<{ code: str
 
   return (
     <div className="mx-auto max-w-md py-12 text-center">
-      <p className="text-xs uppercase tracking-[0.22em] text-gold">You&rsquo;re invited</p>
-      <h1 className="mt-4 text-3xl font-bold tracking-tight">{group.name}</h1>
+      <p className="text-xs uppercase text-gold">{t.join.invited}</p>
+      <h1 className="mt-4 text-3xl font-bold">{group.name}</h1>
       {group.description && <p className="mt-2 text-muted">{group.description}</p>}
-      <p className="mt-3 text-sm text-dim">
-        {count ?? 0} {count === 1 ? "person is" : "people are"} already in
-      </p>
+      <p className="mt-3 text-sm text-dim">{t.join.alreadyIn(count ?? 0)}</p>
 
-      <div className="card mt-8 p-5 text-left">
-        <p className="text-sm text-muted">
-          Joining means your Fajr check-ins show on this group&rsquo;s board. You can only log
-          between the adhan and sunrise in your own city — and you can leave any time.
-        </p>
+      <div className="card mt-8 p-5 text-start">
+        <p className="text-sm text-muted">{t.join.explain}</p>
       </div>
 
       <div className="mt-6">
         {profile ? (
-          <JoinButton code={normalized} />
+          <JoinButton code={normalized} locale={locale} />
         ) : (
           <Link
             href={`/login?next=${encodeURIComponent(`/join/${normalized}`)}`}
             className="inline-block w-full rounded-xl bg-gradient-to-r from-gold to-rose px-6 py-3 text-sm font-semibold text-night transition hover:brightness-110"
           >
-            Sign in to join
+            {t.join.signInToJoin}
           </Link>
         )}
       </div>

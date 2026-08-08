@@ -141,3 +141,26 @@ export function searchCities(query: string, limit = 8): City[] {
 export function cityForTimezone(tz: string): City | undefined {
   return CITIES.find((c) => c.timezone === tz);
 }
+
+/**
+ * Display name for a city in the given locale. Arabic shows the city alone —
+ * the country adds little for a reader who already recognises the name, and
+ * would need 88 more translated strings to do properly.
+ */
+export function cityName(city: City, locale: "ar" | "en"): string {
+  return locale === "ar" ? city.ar : `${city.name}, ${city.country}`;
+}
+
+/**
+ * What to show for a stored profile location. Falls back to the free-text label
+ * saved at onboarding when the user dropped a pin instead of picking a city.
+ */
+export function displayCity(
+  cityId: string | null,
+  storedLabel: string | null,
+  locale: "ar" | "en",
+): string | null {
+  const city = cityId ? findCity(cityId) : undefined;
+  if (city) return cityName(city, locale);
+  return storedLabel;
+}

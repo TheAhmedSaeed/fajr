@@ -7,6 +7,7 @@ export type Profile = {
   email: string | null;
   display_name: string | null;
   city_label: string | null;
+  city_id: string | null;
   latitude: number | null;
   longitude: number | null;
   timezone: string | null;
@@ -30,6 +31,7 @@ export type Member = {
   joined_at: string;
   display_name: string | null;
   city_label: string | null;
+  city_id: string | null;
   /** Members can be in different timezones, so each one's "today" is their own. */
   latitude: number | null;
   longitude: number | null;
@@ -125,7 +127,7 @@ export async function getMembers(groupId: string): Promise<Member[]> {
 
   const { data: profiles } = await supabase
     .from("profiles")
-    .select("id, display_name, city_label, latitude, longitude, timezone, calculation_method, madhab")
+    .select("id, display_name, city_label, city_id, latitude, longitude, timezone, calculation_method, madhab")
     .in("id", ids);
 
   const byId = new Map((profiles ?? []).map((p) => [p.id as string, p]));
@@ -138,6 +140,7 @@ export async function getMembers(groupId: string): Promise<Member[]> {
       joined_at: r.joined_at as string,
       display_name: (p?.display_name as string | null) ?? null,
       city_label: (p?.city_label as string | null) ?? null,
+      city_id: (p?.city_id as string | null) ?? null,
       latitude: (p?.latitude as number | null) ?? null,
       longitude: (p?.longitude as number | null) ?? null,
       timezone: (p?.timezone as string | null) ?? null,

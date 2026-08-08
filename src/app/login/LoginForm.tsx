@@ -3,8 +3,10 @@
 import { useActionState } from "react";
 import { signIn, type ActionResult } from "@/app/actions";
 import { Notice, SubmitButton } from "@/components/ui";
+import { getDict, type Locale } from "@/lib/i18n";
 
-export function LoginForm({ next }: { next: string }) {
+export function LoginForm({ next, locale }: { next: string; locale: Locale }) {
+  const t = getDict(locale);
   const [state, action] = useActionState<ActionResult | null, FormData>(signIn, null);
 
   return (
@@ -13,7 +15,7 @@ export function LoginForm({ next }: { next: string }) {
 
       <div>
         <label htmlFor="email" className="block text-sm font-medium">
-          Email
+          {t.login.email}
         </label>
         <input
           id="email"
@@ -21,22 +23,19 @@ export function LoginForm({ next }: { next: string }) {
           type="email"
           autoComplete="email"
           required
+          dir="ltr"
           placeholder="you@example.com"
           className="mt-1.5 w-full rounded-xl border border-line bg-night px-3.5 py-2.5 text-sm outline-none transition focus:border-gold/60"
         />
       </div>
 
-      <SubmitButton className="w-full" pendingLabel="Sending…">
-        Email me a sign-in link
+      <SubmitButton className="w-full" pendingLabel={t.login.sending}>
+        {t.login.submit}
       </SubmitButton>
 
       <Notice result={state} />
 
-      {state?.ok && (
-        <p className="text-xs text-dim">
-          The link expires shortly. If it doesn&rsquo;t arrive, check your spam folder.
-        </p>
-      )}
+      {state?.ok && <p className="text-xs text-dim">{t.login.hint}</p>}
     </form>
   );
 }

@@ -9,7 +9,9 @@ import {
   isOnboarded,
   type Member,
 } from "@/lib/data";
-import { formatTime, isMethodId, isValidWindow, todayView, type MadhabId } from "@/lib/prayer";
+import { getT } from "@/lib/locale";
+import { displayCity } from "@/lib/cities";
+import { formatTime, isMethodId, isValidWindow, localDate, todayView, type MadhabId } from "@/lib/prayer";
 import {
   computeGroupStats,
   computeStats,
@@ -48,10 +50,10 @@ export default async function GroupPage({
   if (!profile) redirect("/login");
   if (!isOnboarded(profile)) redirect("/onboarding");
 
+  const { locale, t } = await getT();
   const { id } = await params;
   const { period: rawPeriod } = await searchParams;
-  const period: Period =
-    rawPeriod === "month" || rawPeriod === "all" ? rawPeriod : "week";
+  const period: Period = rawPeriod === "month" || rawPeriod === "all" ? rawPeriod : "week";
 
   // RLS returns nothing for a group the viewer isn't in, so this covers both
   // "does not exist" and "not a member".
@@ -65,11 +67,7 @@ export default async function GroupPage({
   const now = new Date();
   // Period boundaries follow the viewer's calendar, which is the only frame
   // that makes sense for a leaderboard spanning several timezones.
-  const viewerTz = profile.timezone!;
-  const viewerToday = todayView(
-    { latitude: profile.latitude!, longitude: profile.longitude!, timezone: viewerTz, method: "MuslimWorldLeague", madhab: "Shafi" },
-    now,
-  ).today;
+  const viewerToday = localDate(now, profile.timezone!);
   const range = periodRange(period, viewerToday);
 
   const logsByUser = new Map<string, typeof logs>();
@@ -104,7 +102,7 @@ export default async function GroupPage({
         theirToday && loc && isValidWindow(theirToday.window)
           ? formatTime(theirToday.window.fajr, loc.timezone)
           : "—",
-      cityLabel: m.city_label,
+      cityLabel: displayCity(m.city_id, m.city_label, locale),
       streak: stats.currentStreak,
       isYou: m.user_id === profile.id,
     });
@@ -123,7 +121,9 @@ export default async function GroupPage({
   }
 
   // Sort the board so whoever is still missing is impossible to overlook.
-  board.sort((a, b) => Number(Boolean(a.logged)) - Number(Boolean(b.logged)) || a.name.localeCompare(b.name));
+  board.sort(
+    (a, b) => Number(Boolean(a.logged)) - Number(Boolean(b.logged)) || a.name.localeCompare(b.name),
+  );
 
   const earliestJoin = members.reduce<string | null>((acc, m) => {
     const d = m.joined_at.slice(0, 10);
@@ -133,48 +133,58 @@ export default async function GroupPage({
 
   const origin = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
   const isOwner = group.owner_id === profile.id;
+  const inToday = board.filter((b) => b.logged).length;
 
   return (
     <div className="space-y-6">
       <div>
         <Link href="/dashboard" className="text-xs text-muted hover:text-ink">
-          ← Dashboard
+          {t.group.back}
         </Link>
-        <h1 className="mt-2 text-2xl font-bold tracking-tight">{group.name}</h1>
+        <h1 className="mt-2 text-2xl font-bold">{group.name}</h1>
         {group.description && <p className="mt-1 text-sm text-muted">{group.description}</p>}
       </div>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <Metric value={String(members.length)} label="Members" />
-        <Metric value={String(groupStats.perfectStreak)} label="Group streak" icon="🔥" tone="gold" />
-        <Metric value={String(groupStats.perfectDays)} label="Perfect days" icon="💯" />
+        <Metric value={String(members.length)} label={t.group.membersMetric} />
         <Metric
-          value={`${board.filter((b) => b.logged).length}/${members.length}`}
-          label="In today"
-          icon="🌅"
+          value={String(groupStats.perfectStreak)}
+          label={t.group.groupStreak}
+          icon="🔥"
+          tone="gold"
         />
+        <Metric value={String(groupStats.perfectDays)} label={t.group.perfectDays} icon="💯" />
+        <Metric value={`${inToday}/${members.length}`} label={t.group.inToday} icon="🌅" />
       </div>
 
       {groupStats.perfectStreak > 0 && (
         <p className="rounded-xl border border-gold/25 bg-gold/[0.06] px-4 py-3 text-sm text-gold">
-          🔥 Every member has made it {groupStats.perfectStreak}{" "}
-          {groupStats.perfectStreak === 1 ? "day" : "days"} running. Don&rsquo;t be the one who ends
-          it.
+          {t.group.perfectBanner(groupStats.perfectStreak)}
         </p>
       )}
 
-      <DawnBoard entries={board} />
+      <DawnBoard entries={board} t={t} />
 
       <Leaderboard
         rows={rankLeaderboard(leaderboard)}
         period={period}
         groupId={group.id}
         youId={profile.id}
+        t={t}
       />
 
-      <InviteBox code={group.invite_code} url={`${origin}/join/${group.invite_code}`} />
+      <InviteBox
+        code={group.invite_code}
+        url={`${origin}/join/${group.invite_code}`}
+        locale={locale}
+      />
 
-      <GroupAdmin groupId={group.id} isOwner={isOwner} groupName={group.name} />
+      <GroupAdmin
+        groupId={group.id}
+        isOwner={isOwner}
+        groupName={group.name}
+        locale={locale}
+      />
     </div>
   );
 }

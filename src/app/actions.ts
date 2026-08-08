@@ -1,10 +1,14 @@
 "use server";
 
+import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getProfile, locationOf } from "@/lib/data";
+import { getT } from "@/lib/locale";
+import { LOCALE_COOKIE } from "@/lib/locale";
+import { isLocale } from "@/lib/i18n";
 import { addDays, isMethodId, localDate, todayView, windowFor } from "@/lib/prayer";
 import {
   GRACE_LOOKBACK_DAYS,
@@ -17,13 +21,32 @@ import {
 export type ActionResult = { ok: true; message: string } | { ok: false; error: string };
 
 /* ------------------------------------------------------------------ */
+/* Locale                                                              */
+/* ------------------------------------------------------------------ */
+
+export async function setLocale(formData: FormData) {
+  const next = String(formData.get("locale") ?? "");
+  if (!isLocale(next)) return;
+
+  const store = await cookies();
+  store.set(LOCALE_COOKIE, next, {
+    path: "/",
+    maxAge: 60 * 60 * 24 * 365,
+    sameSite: "lax",
+  });
+
+  revalidatePath("/", "layout");
+}
+
+/* ------------------------------------------------------------------ */
 /* Auth                                                                */
 /* ------------------------------------------------------------------ */
 
 export async function signIn(_prev: ActionResult | null, formData: FormData): Promise<ActionResult> {
+  const { t } = await getT();
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
-    return { ok: false, error: "Enter a valid email address." };
+    return { ok: false, error: t.errors.invalidEmail };
   }
 
   const supabase = await createClient();
@@ -36,7 +59,7 @@ export async function signIn(_prev: ActionResult | null, formData: FormData): Pr
   });
 
   if (error) return { ok: false, error: error.message };
-  return { ok: true, message: `Check ${email} for your sign-in link.` };
+  return { ok: true, message: t.errors.magicLinkSent(email) };
 }
 
 export async function signOut() {
@@ -53,35 +76,37 @@ export async function saveProfile(
   _prev: ActionResult | null,
   formData: FormData,
 ): Promise<ActionResult> {
+  const { t } = await getT();
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return { ok: false, error: "You are not signed in." };
+  if (!user) return { ok: false, error: t.errors.notSignedIn };
 
   const displayName = String(formData.get("display_name") ?? "").trim();
   const cityLabel = String(formData.get("city_label") ?? "").trim();
+  const cityId = String(formData.get("city_id") ?? "").trim();
   const timezone = String(formData.get("timezone") ?? "").trim();
   const latitude = Number(formData.get("latitude"));
   const longitude = Number(formData.get("longitude"));
   const method = String(formData.get("calculation_method") ?? "");
   const madhab = String(formData.get("madhab") ?? "Shafi");
 
-  if (!displayName) return { ok: false, error: "Pick a name your group will recognise." };
+  if (!displayName) return { ok: false, error: t.errors.pickName };
   if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90) {
-    return { ok: false, error: "Choose a city, or allow location access." };
+    return { ok: false, error: t.errors.pickCity };
   }
   if (!Number.isFinite(longitude) || longitude < -180 || longitude > 180) {
-    return { ok: false, error: "Choose a city, or allow location access." };
+    return { ok: false, error: t.errors.pickCity };
   }
-  if (!isMethodId(method)) return { ok: false, error: "Pick a calculation method." };
+  if (!isMethodId(method)) return { ok: false, error: t.errors.pickMethod };
 
   // Reject a timezone Intl does not recognise — a bad zone would silently shift
   // every day boundary for this user.
   try {
     new Intl.DateTimeFormat("en-CA", { timeZone: timezone });
   } catch {
-    return { ok: false, error: "That timezone was not recognised. Try picking a city instead." };
+    return { ok: false, error: t.errors.badTimezone };
   }
 
   const { error } = await supabase
@@ -89,6 +114,7 @@ export async function saveProfile(
     .update({
       display_name: displayName,
       city_label: cityLabel || null,
+      city_id: cityId || null,
       latitude,
       longitude,
       timezone,
@@ -105,7 +131,7 @@ export async function saveProfile(
   const to = String(formData.get("redirect_to") ?? "");
   if (to.startsWith("/") && !to.startsWith("//")) redirect(to);
 
-  return { ok: true, message: "Saved." };
+  return { ok: true, message: t.errors.saved };
 }
 
 /* ------------------------------------------------------------------ */
@@ -125,26 +151,19 @@ export async function checkIn(
   _prev: ActionResult | null,
   formData: FormData,
 ): Promise<ActionResult> {
+  const { t } = await getT();
   const profile = await getProfile();
-  if (!profile) return { ok: false, error: "You are not signed in." };
+  if (!profile) return { ok: false, error: t.errors.notSignedIn };
 
   const location = locationOf(profile);
-  if (!location) return { ok: false, error: "Set your city first so we can work out Fajr." };
+  if (!location) return { ok: false, error: t.errors.setCityFirst };
 
   const inCongregation = formData.get("in_congregation") === "on";
   const view = todayView(location, new Date());
 
-  if (view.state === "before") {
-    return {
-      ok: false,
-      error: "Fajr has not come in yet. The window opens at the adhan.",
-    };
-  }
+  if (view.state === "before") return { ok: false, error: t.errors.beforeFajr };
   if (view.state === "closed" || !view.tier) {
-    return {
-      ok: false,
-      error: "The sun is already up. Fajr can only be logged between the adhan and sunrise.",
-    };
+    return { ok: false, error: t.errors.afterSunrise };
   }
 
   const points = pointsFor(view.tier, inCongregation);
@@ -163,12 +182,12 @@ export async function checkIn(
 
   if (error) {
     // 23505 = unique_violation on (user_id, prayer_date).
-    if (error.code === "23505") return { ok: false, error: "You already logged Fajr today." };
+    if (error.code === "23505") return { ok: false, error: t.errors.alreadyLogged };
     return { ok: false, error: error.message };
   }
 
   revalidatePath("/", "layout");
-  return { ok: true, message: `Logged. +${points} points.` };
+  return { ok: true, message: t.errors.logged(points) };
 }
 
 /**
@@ -181,11 +200,12 @@ export async function useGraceDay(
   _prev: ActionResult | null,
   _formData: FormData,
 ): Promise<ActionResult> {
+  const { t } = await getT();
   const profile = await getProfile();
-  if (!profile) return { ok: false, error: "You are not signed in." };
+  if (!profile) return { ok: false, error: t.errors.notSignedIn };
 
   const location = locationOf(profile);
-  if (!location) return { ok: false, error: "Set your city first." };
+  if (!location) return { ok: false, error: t.errors.setCityFirst };
 
   const today = localDate(new Date(), location.timezone);
   const target = addDays(today, -GRACE_LOOKBACK_DAYS);
@@ -199,13 +219,10 @@ export async function useGraceDay(
   const rows = (existing ?? []) as LogRow[];
 
   if (rows.some((r) => r.prayer_date === target)) {
-    return { ok: false, error: "That day is already accounted for." };
+    return { ok: false, error: t.errors.dayAccounted };
   }
   if (graceUsedThisMonth(rows, today) >= GRACE_PER_MONTH) {
-    return {
-      ok: false,
-      error: `You have used both grace days this month. They reset on the 1st.`,
-    };
+    return { ok: false, error: t.errors.graceExhausted };
   }
 
   const window = windowFor(location, target);
@@ -223,12 +240,12 @@ export async function useGraceDay(
   });
 
   if (error) {
-    if (error.code === "23505") return { ok: false, error: "That day is already accounted for." };
+    if (error.code === "23505") return { ok: false, error: t.errors.dayAccounted };
     return { ok: false, error: error.message };
   }
 
   revalidatePath("/", "layout");
-  return { ok: true, message: "Grace day applied. Your streak is safe." };
+  return { ok: true, message: t.errors.graceApplied };
 }
 
 /* ------------------------------------------------------------------ */
@@ -239,14 +256,13 @@ export async function createGroup(
   _prev: ActionResult | null,
   formData: FormData,
 ): Promise<ActionResult> {
+  const { t } = await getT();
   const profile = await getProfile();
-  if (!profile) return { ok: false, error: "You are not signed in." };
+  if (!profile) return { ok: false, error: t.errors.notSignedIn };
 
   const name = String(formData.get("name") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim();
-  if (name.length < 1 || name.length > 60) {
-    return { ok: false, error: "Give the group a name (1–60 characters)." };
-  }
+  if (name.length < 1 || name.length > 60) return { ok: false, error: t.errors.groupName };
 
   const admin = createAdminClient();
 
@@ -264,7 +280,9 @@ export async function createGroup(
     .select("id")
     .single();
 
-  if (error || !group) return { ok: false, error: error?.message ?? "Could not create the group." };
+  if (error || !group) {
+    return { ok: false, error: error?.message ?? t.errors.groupCreateFailed };
+  }
 
   const { error: memberError } = await admin
     .from("group_members")
@@ -284,11 +302,12 @@ export async function joinGroup(
   _prev: ActionResult | null,
   formData: FormData,
 ): Promise<ActionResult> {
+  const { t } = await getT();
   const profile = await getProfile();
-  if (!profile) return { ok: false, error: "You are not signed in." };
+  if (!profile) return { ok: false, error: t.errors.notSignedIn };
 
   const code = String(formData.get("code") ?? "").trim().toUpperCase();
-  if (!code) return { ok: false, error: "Enter an invite code." };
+  if (!code) return { ok: false, error: t.errors.enterCode };
 
   const admin = createAdminClient();
 
@@ -300,7 +319,7 @@ export async function joinGroup(
     .eq("invite_code", code)
     .maybeSingle();
 
-  if (!group) return { ok: false, error: "That invite code does not match any group." };
+  if (!group) return { ok: false, error: t.errors.badCode };
 
   const { error } = await admin
     .from("group_members")
@@ -319,11 +338,12 @@ export async function leaveGroup(
   _prev: ActionResult | null,
   formData: FormData,
 ): Promise<ActionResult> {
+  const { t } = await getT();
   const profile = await getProfile();
-  if (!profile) return { ok: false, error: "You are not signed in." };
+  if (!profile) return { ok: false, error: t.errors.notSignedIn };
 
   const groupId = String(formData.get("group_id") ?? "");
-  if (!groupId) return { ok: false, error: "Missing group." };
+  if (!groupId) return { ok: false, error: t.errors.missingGroup };
 
   const supabase = await createClient();
   const { data: group } = await supabase
@@ -333,10 +353,7 @@ export async function leaveGroup(
     .maybeSingle();
 
   if (group && group.owner_id === profile.id) {
-    return {
-      ok: false,
-      error: "You own this group. Delete it instead, or hand it over first.",
-    };
+    return { ok: false, error: t.errors.ownerCannotLeave };
   }
 
   // RLS allows deleting only your own membership row.
@@ -356,11 +373,12 @@ export async function deleteGroup(
   _prev: ActionResult | null,
   formData: FormData,
 ): Promise<ActionResult> {
+  const { t } = await getT();
   const profile = await getProfile();
-  if (!profile) return { ok: false, error: "You are not signed in." };
+  if (!profile) return { ok: false, error: t.errors.notSignedIn };
 
   const groupId = String(formData.get("group_id") ?? "");
-  if (!groupId) return { ok: false, error: "Missing group." };
+  if (!groupId) return { ok: false, error: t.errors.missingGroup };
 
   const supabase = await createClient();
   // RLS restricts DELETE on groups to the owner, so this is safe as-is.

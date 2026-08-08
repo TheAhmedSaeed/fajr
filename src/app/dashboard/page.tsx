@@ -1,6 +1,9 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { displayNameOf, getLogs, getMyGroups, getProfile, isOnboarded, locationOf } from "@/lib/data";
+import { getT } from "@/lib/locale";
+import { formatDate } from "@/lib/i18n";
+import { displayCity } from "@/lib/cities";
 import { addDays, formatTime, isValidWindow, todayView } from "@/lib/prayer";
 import {
   badgesFor,
@@ -22,6 +25,7 @@ export default async function Dashboard() {
   if (!profile) redirect("/login");
   if (!isOnboarded(profile)) redirect("/onboarding");
 
+  const { locale, t } = await getT();
   const location = locationOf(profile)!;
   const now = new Date();
   const view = todayView(location, now);
@@ -42,19 +46,22 @@ export default async function Dashboard() {
     Boolean(stats.firstDate && stats.firstDate < graceTarget);
 
   const windowOk = isValidWindow(view.window) && isValidWindow(view.next);
+  const cityLabel =
+    displayCity(profile.city_id, profile.city_label, locale) ?? location.timezone;
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">
-          {greeting()}, {displayNameOf(profile)}
+        <h1 className="text-2xl font-bold">
+          {t.dashboard.greeting}، {displayNameOf(profile)}
         </h1>
-        <p className="mt-1 text-sm text-muted">{view.today}</p>
+        <p className="mt-1 text-sm text-muted">{formatDate(view.today, locale)}</p>
       </div>
 
       {windowOk ? (
         <CheckInCard
-          cityLabel={profile.city_label ?? location.timezone}
+          locale={locale}
+          cityLabel={cityLabel}
           fajrISO={view.window.fajr.toISOString()}
           sunriseISO={view.window.sunrise.toISOString()}
           nextFajrISO={view.next.fajr.toISOString()}
@@ -77,66 +84,56 @@ export default async function Dashboard() {
       ) : (
         <div className="card border-danger/30 p-5">
           <p className="text-sm">
-            Fajr and sunrise could not be resolved for your location today. Try a different
-            calculation method in{" "}
+            {t.checkIn.unavailable}{" "}
             <Link href="/settings" className="text-gold underline underline-offset-2">
-              settings
+              {t.checkIn.unavailableLink}
             </Link>
-            .
           </p>
         </div>
       )}
 
       {showGrace && (
         <GraceCard
-          targetDate={graceTarget}
+          locale={locale}
+          targetDate={formatDate(graceTarget, locale)}
           remaining={graceRemaining}
           streakAtStake={stats.currentStreak}
         />
       )}
 
-      <StatsRow stats={stats} />
+      <StatsRow stats={stats} t={t} />
 
       <section>
         <div className="flex items-baseline justify-between">
-          <h2 className="text-sm font-semibold">Your groups</h2>
-          <span className="text-xs text-dim">{groups.length}</span>
+          <h2 className="text-sm font-semibold">{t.dashboard.yourGroups}</h2>
+          <span className="tabular text-xs text-dim">{groups.length}</span>
         </div>
 
         {groups.length > 0 ? (
           <ul className="mt-3 grid gap-3 sm:grid-cols-2">
             {groups.map((g) => (
               <li key={g.id}>
-                <Link
-                  href={`/g/${g.id}`}
-                  className="card block p-4 transition hover:border-gold/30"
-                >
+                <Link href={`/g/${g.id}`} className="card block p-4 transition hover:border-gold/30">
                   <p className="font-semibold">{g.name}</p>
                   {g.description && (
                     <p className="mt-1 line-clamp-2 text-sm text-muted">{g.description}</p>
                   )}
                   <p className="mt-2.5 text-xs text-dim">
-                    {g.member_count} {g.member_count === 1 ? "member" : "members"}
-                    {g.owner_id === profile.id && " · you own this"}
+                    {t.dashboard.members(g.member_count)}
+                    {g.owner_id === profile.id && ` · ${t.dashboard.youOwn}`}
                   </p>
                 </Link>
               </li>
             ))}
           </ul>
         ) : (
-          <p className="mt-3 text-sm text-muted">
-            No groups yet. Create one and share the invite link, or enter a code you were sent.
-          </p>
+          <p className="mt-3 text-sm text-muted">{t.dashboard.noGroups}</p>
         )}
       </section>
 
-      <GroupForms />
+      <GroupForms locale={locale} />
 
-      <BadgeGrid badges={badgesFor(stats)} />
+      <BadgeGrid badges={badgesFor(stats)} t={t} />
     </div>
   );
-}
-
-function greeting(): string {
-  return "Assalamu alaikum";
 }

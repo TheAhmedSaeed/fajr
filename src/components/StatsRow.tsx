@@ -1,21 +1,26 @@
 import type { Stats } from "@/lib/scoring";
+import type { Dict } from "@/lib/i18n";
 
-export function StatsRow({ stats }: { stats: Stats }) {
-  const consistency =
-    stats.consistency === null ? "—" : `${Math.round(stats.consistency * 100)}%`;
+export function StatsRow({ stats, t }: { stats: Stats; t: Dict }) {
+  const consistency = stats.consistency === null ? "—" : `${Math.round(stats.consistency * 100)}%`;
 
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
       <Stat
         icon="🔥"
         value={String(stats.currentStreak)}
-        label="Current streak"
+        label={t.stats.currentStreak}
         tone={stats.streakAtRisk ? "warn" : "gold"}
-        hint={stats.streakAtRisk ? "Not logged today" : undefined}
+        hint={stats.streakAtRisk ? t.stats.notLoggedToday : undefined}
       />
-      <Stat icon="⭐" value={String(stats.totalPoints)} label="Total points" />
-      <Stat icon="📈" value={consistency} label="Consistency" hint={`${stats.daysPrayed} days prayed`} />
-      <Stat icon="🏔️" value={String(stats.longestStreak)} label="Longest streak" />
+      <Stat icon="⭐" value={String(stats.totalPoints)} label={t.stats.totalPoints} />
+      <Stat
+        icon="📈"
+        value={consistency}
+        label={t.stats.consistency}
+        hint={t.stats.daysPrayed(stats.daysPrayed)}
+      />
+      <Stat icon="🏔️" value={String(stats.longestStreak)} label={t.stats.longestStreak} />
     </div>
   );
 }

@@ -4,10 +4,13 @@ import { useActionState, useEffect, useState } from "react";
 import { checkIn, type ActionResult } from "@/app/actions";
 import { Notice, SubmitButton } from "./ui";
 import type { Tier } from "@/lib/prayer";
+import { getDict, type Dict, type Locale } from "@/lib/i18n";
+import { TIER_POINTS } from "@/lib/scoring";
 
 type Logged = { tier: Tier | null; points: number; inCongregation: boolean; kind: "prayed" | "grace" };
 
 export type CheckInCardProps = {
+  locale: Locale;
   cityLabel: string;
   /** ISO instants; all display strings are pre-formatted server-side in the user's zone. */
   fajrISO: string;
@@ -22,10 +25,10 @@ export type CheckInCardProps = {
   streak: number;
 };
 
-const TIER_COPY: Record<Tier, { label: string; ar: string; points: number; tone: string }> = {
-  early: { label: "First light", ar: "الوقت المختار", points: 3, tone: "text-gold" },
-  middle: { label: "On time", ar: "في الوقت", points: 2, tone: "text-rose" },
-  late: { label: "Just in time", ar: "قبل الشروق", points: 1, tone: "text-muted" },
+const TONES: Record<Tier, string> = {
+  early: "text-gold",
+  middle: "text-rose",
+  late: "text-muted",
 };
 
 function duration(ms: number): string {
@@ -38,6 +41,9 @@ function duration(ms: number): string {
 }
 
 export function CheckInCard(props: CheckInCardProps) {
+  const t = getDict(props.locale);
+  const isRtl = props.locale === "ar";
+
   const fajr = new Date(props.fajrISO).getTime();
   const sunrise = new Date(props.sunriseISO).getTime();
   const nextFajr = new Date(props.nextFajrISO).getTime();
@@ -53,8 +59,6 @@ export function CheckInCard(props: CheckInCardProps) {
   const [checkInState, checkInAction] = useActionState<ActionResult | null, FormData>(checkIn, null);
 
   const state = now < fajr ? "before" : now < sunrise ? "open" : "closed";
-
-  // Which third of the window we're in right now.
   const progress = state === "open" ? (now - fajr) / (sunrise - fajr) : 0;
   const liveTier: Tier = progress < 1 / 3 ? "early" : progress < 2 / 3 ? "middle" : "late";
 
@@ -62,16 +66,16 @@ export function CheckInCard(props: CheckInCardProps) {
     <section className="card overflow-hidden">
       <div className="flex items-start justify-between gap-4 border-b border-line px-5 py-4 sm:px-6">
         <div>
-          <p className="text-xs uppercase tracking-[0.16em] text-dim">Today&rsquo;s Fajr</p>
+          <p className="text-xs uppercase text-dim">{t.checkIn.heading}</p>
           <p className="mt-0.5 text-sm text-muted">{props.cityLabel}</p>
         </div>
-        <div className="flex gap-5 text-right">
+        <div className="flex gap-5 text-end">
           <div>
-            <p className="text-[10px] uppercase tracking-wider text-dim">Adhan</p>
+            <p className="text-[10px] uppercase text-dim">{t.checkIn.adhan}</p>
             <p className="tabular text-lg font-semibold text-gold">{props.fajrLabel}</p>
           </div>
           <div>
-            <p className="text-[10px] uppercase tracking-wider text-dim">Sunrise</p>
+            <p className="text-[10px] uppercase text-dim">{t.checkIn.sunrise}</p>
             <p className="tabular text-lg font-semibold text-muted">{props.sunriseLabel}</p>
           </div>
         </div>
@@ -79,11 +83,18 @@ export function CheckInCard(props: CheckInCardProps) {
 
       <div className="px-5 py-6 sm:px-6">
         {props.logged ? (
-          <LoggedState logged={props.logged} streak={props.streak} sunriseLabel={props.sunriseLabel} />
+          <LoggedState
+            t={t}
+            logged={props.logged}
+            streak={props.streak}
+            sunriseLabel={props.sunriseLabel}
+          />
         ) : state === "before" ? (
-          <BeforeState msLeft={fajr - now} fajrLabel={props.fajrLabel} />
+          <BeforeState t={t} msLeft={fajr - now} fajrLabel={props.fajrLabel} />
         ) : state === "open" ? (
           <OpenState
+            t={t}
+            isRtl={isRtl}
             msLeft={sunrise - now}
             progress={progress}
             tier={liveTier}
@@ -92,6 +103,7 @@ export function CheckInCard(props: CheckInCardProps) {
           />
         ) : (
           <ClosedState
+            t={t}
             msLeft={nextFajr - now}
             nextFajrLabel={props.nextFajrLabel}
             sunriseLabel={props.sunriseLabel}
@@ -105,10 +117,12 @@ export function CheckInCard(props: CheckInCardProps) {
 /* ------------------------------------------------------------------ */
 
 function LoggedState({
+  t,
   logged,
   streak,
   sunriseLabel,
 }: {
+  t: Dict;
   logged: Logged;
   streak: number;
   sunriseLabel: string;
@@ -119,99 +133,92 @@ function LoggedState({
         <div className="mx-auto flex size-16 items-center justify-center rounded-full bg-violet/15 text-3xl">
           🛡️
         </div>
-        <p className="mt-4 text-lg font-semibold">Grace day applied</p>
-        <p className="mt-1 text-sm text-muted">
-          Your streak is protected. It doesn&rsquo;t count as a prayer — tomorrow does.
-        </p>
+        <p className="mt-4 text-lg font-semibold">{t.checkIn.graceTitle}</p>
+        <p className="mt-1 text-sm text-muted">{t.checkIn.graceBody}</p>
       </div>
     );
   }
 
-  const tier = logged.tier ? TIER_COPY[logged.tier] : null;
+  const tier = logged.tier;
 
   return (
     <div className="text-center">
       <div className="mx-auto flex size-16 items-center justify-center rounded-full bg-teal/15 text-3xl">
         ✓
       </div>
-      <p className="mt-4 text-lg font-semibold">
-        Fajr logged <span className="ar text-muted">· صليت الفجر</span>
-      </p>
+      <p className="mt-4 text-lg font-semibold">{t.checkIn.loggedTitle}</p>
 
-      {tier && (
-        <p className={`mt-1 text-sm ${tier.tone}`}>
-          {tier.label} <span className="ar">· {tier.ar}</span>
-        </p>
-      )}
+      {tier && <p className={`mt-1 text-sm ${TONES[tier]}`}>{t.tiers[tier].name}</p>}
 
-      <div className="mt-5 flex items-center justify-center gap-3 text-sm">
+      <div className="mt-5 flex flex-wrap items-center justify-center gap-3 text-sm">
         <span className="rounded-full border border-gold/30 bg-gold/10 px-3 py-1 font-semibold text-gold">
-          +{logged.points} points
+          {t.checkIn.loggedPoints(logged.points)}
         </span>
         {logged.inCongregation && (
           <span className="rounded-full border border-teal/30 bg-teal/10 px-3 py-1 text-teal">
-            🕌 In congregation
+            {t.checkIn.loggedJamaah}
           </span>
         )}
         {streak > 0 && (
           <span className="rounded-full border border-line bg-surface-2 px-3 py-1">
-            🔥 {streak}-day streak
+            {t.checkIn.loggedStreak(streak)}
           </span>
         )}
       </div>
 
-      <p className="mt-5 text-xs text-dim">
-        The window closed at {sunriseLabel}. Come back tomorrow.
-      </p>
+      <p className="mt-5 text-xs text-dim">{t.checkIn.loggedClosed(sunriseLabel)}</p>
     </div>
   );
 }
 
-function BeforeState({ msLeft, fajrLabel }: { msLeft: number; fajrLabel: string }) {
+function BeforeState({ t, msLeft, fajrLabel }: { t: Dict; msLeft: number; fajrLabel: string }) {
   return (
     <div className="text-center">
-      <p className="text-xs uppercase tracking-[0.16em] text-dim">Fajr begins in</p>
-      <p className="tabular mt-2 text-5xl font-bold sm:text-6xl dawn-text">{duration(msLeft)}</p>
-      <p className="mt-3 text-sm text-muted">
-        Check-in unlocks at the adhan ({fajrLabel}) and closes at sunrise.
+      <p className="text-xs uppercase text-dim">{t.checkIn.beforeLabel}</p>
+      <p className="tabular mx-auto mt-2 text-5xl font-bold sm:text-6xl dawn-text">
+        {duration(msLeft)}
       </p>
+      <p className="mt-3 text-sm text-muted">{t.checkIn.beforeHelp(fajrLabel)}</p>
       <button
         disabled
         className="mt-6 w-full cursor-not-allowed rounded-xl border border-line bg-surface-2/50 px-4 py-3.5 text-sm font-semibold text-dim"
       >
-        🔒 Locked until Fajr
+        {t.checkIn.locked}
       </button>
     </div>
   );
 }
 
 function OpenState({
+  t,
+  isRtl,
   msLeft,
   progress,
   tier,
   action,
   result,
 }: {
+  t: Dict;
+  isRtl: boolean;
   msLeft: number;
   progress: number;
   tier: Tier;
   action: (payload: FormData) => void;
   result: ActionResult | null;
 }) {
-  const copy = TIER_COPY[tier];
-
   return (
     <div>
       <div className="text-center">
-        <p className="text-xs uppercase tracking-[0.16em] text-dim">Window closes in</p>
-        <p className="tabular mt-2 text-5xl font-bold sm:text-6xl dawn-text">{duration(msLeft)}</p>
-        <p className={`mt-3 text-sm font-medium ${copy.tone}`}>
-          Log now for <strong>{copy.points} points</strong> — {copy.label}{" "}
-          <span className="ar">· {copy.ar}</span>
+        <p className="text-xs uppercase text-dim">{t.checkIn.openLabel}</p>
+        <p className="tabular mx-auto mt-2 text-5xl font-bold sm:text-6xl dawn-text">
+          {duration(msLeft)}
+        </p>
+        <p className={`mt-3 text-sm font-medium ${TONES[tier]}`}>
+          {t.checkIn.openPrompt(TIER_POINTS[tier], t.tiers[tier].name)}
         </p>
       </div>
 
-      <ThirdsBar progress={progress} />
+      <ThirdsBar t={t} progress={progress} isRtl={isRtl} />
 
       <form action={action} className="mt-6 space-y-3">
         <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-line bg-surface-2/50 px-4 py-3 text-sm hover:bg-surface-2">
@@ -220,14 +227,12 @@ function OpenState({
             name="in_congregation"
             className="size-4 accent-[var(--color-teal)]"
           />
-          <span>
-            I prayed in congregation <span className="ar text-muted">· في جماعة</span>
-          </span>
-          <span className="ml-auto text-xs font-semibold text-teal">+2</span>
+          <span>{t.checkIn.congregation}</span>
+          <span className="tabular ms-auto text-xs font-semibold text-teal">+2</span>
         </label>
 
-        <SubmitButton className="w-full py-3.5 text-base pulse" pendingLabel="Logging…">
-          I prayed Fajr <span className="ar">· صليت الفجر</span>
+        <SubmitButton className="w-full py-3.5 text-base pulse" pendingLabel={t.checkIn.submitting}>
+          {t.checkIn.submit}
         </SubmitButton>
 
         <Notice result={result} />
@@ -236,46 +241,59 @@ function OpenState({
   );
 }
 
-/** Visual of the three scoring bands, with a marker for where "now" sits. */
-function ThirdsBar({ progress }: { progress: number }) {
+/**
+ * The three scoring bands with a marker for "now". Built on logical inset so it
+ * mirrors under RTL; the marker's own centring translate has to flip by hand
+ * because `transform` is physical, not direction-aware.
+ */
+function ThirdsBar({ t, progress, isRtl }: { t: Dict; progress: number; isRtl: boolean }) {
   const pct = Math.max(0, Math.min(1, progress)) * 100;
   return (
     <div className="mt-6">
       <div className="relative h-2 overflow-hidden rounded-full bg-surface-2">
-        <div className="absolute inset-y-0 left-0 w-1/3 bg-gold/35" />
-        <div className="absolute inset-y-0 left-1/3 w-1/3 bg-rose/30" />
-        <div className="absolute inset-y-0 left-2/3 w-1/3 bg-muted/15" />
+        <div className="absolute inset-y-0 start-0 w-1/3 bg-gold/35" />
+        <div className="absolute inset-y-0 start-1/3 w-1/3 bg-rose/30" />
+        <div className="absolute inset-y-0 start-2/3 w-1/3 bg-muted/15" />
         <div
-          className="absolute -top-1 size-4 -translate-x-1/2 rounded-full border-2 border-night bg-ink shadow"
-          style={{ left: `${pct}%` }}
+          className="absolute -top-1 size-4 rounded-full border-2 border-night bg-ink shadow"
+          style={{
+            insetInlineStart: `${pct}%`,
+            transform: `translateX(${isRtl ? "50%" : "-50%"})`,
+          }}
         />
       </div>
-      <div className="mt-1.5 flex justify-between text-[10px] uppercase tracking-wider text-dim">
-        <span className="text-gold">3 pts</span>
-        <span className="text-rose">2 pts</span>
-        <span>1 pt</span>
+      <div className="mt-1.5 flex justify-between text-[10px] uppercase text-dim">
+        <span className="text-gold">
+          {TIER_POINTS.early} {t.checkIn.pts}
+        </span>
+        <span className="text-rose">
+          {TIER_POINTS.middle} {t.checkIn.pts}
+        </span>
+        <span>
+          {TIER_POINTS.late} {t.checkIn.pts}
+        </span>
       </div>
     </div>
   );
 }
 
 function ClosedState({
+  t,
   msLeft,
   nextFajrLabel,
   sunriseLabel,
 }: {
+  t: Dict;
   msLeft: number;
   nextFajrLabel: string;
   sunriseLabel: string;
 }) {
   return (
     <div className="text-center">
-      <p className="text-sm text-muted">
-        The sun rose at {sunriseLabel}. Today&rsquo;s window has closed.
-      </p>
-      <p className="mt-4 text-xs uppercase tracking-[0.16em] text-dim">Next Fajr in</p>
-      <p className="tabular mt-1 text-4xl font-bold sm:text-5xl">{duration(msLeft)}</p>
-      <p className="mt-2 text-sm text-muted">Tomorrow at {nextFajrLabel}</p>
+      <p className="text-sm text-muted">{t.checkIn.closedBody(sunriseLabel)}</p>
+      <p className="mt-4 text-xs uppercase text-dim">{t.checkIn.nextLabel}</p>
+      <p className="tabular mx-auto mt-1 text-4xl font-bold sm:text-5xl">{duration(msLeft)}</p>
+      <p className="mt-2 text-sm text-muted">{t.checkIn.nextAt(nextFajrLabel)}</p>
     </div>
   );
 }

@@ -1,23 +1,47 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getProfile } from "@/lib/data";
+import { getT } from "@/lib/locale";
+import { TIER_POINTS } from "@/lib/scoring";
 
-export default async function Home() {
+export default async function Home({
+  searchParams,
+}: {
+  searchParams: Promise<{ code?: string; next?: string; error_description?: string }>;
+}) {
+  const { code, next, error_description } = await searchParams;
+
+  /*
+   * Supabase falls back to the project's Site URL when the requested
+   * `emailRedirectTo` is not on the redirect allow-list, which drops the
+   * auth code on `/` instead of `/auth/callback`. Forwarding it keeps sign-in
+   * working even when the dashboard is misconfigured. Cookies survive the hop,
+   * so the PKCE verifier is still available to the exchange.
+   */
+  if (code) {
+    const target = next && next.startsWith("/") && !next.startsWith("//") ? next : "/dashboard";
+    redirect(`/auth/callback?code=${encodeURIComponent(code)}&next=${encodeURIComponent(target)}`);
+  }
+  if (error_description) {
+    redirect(`/login?error=${encodeURIComponent(error_description)}`);
+  }
+
   const profile = await getProfile();
   if (profile) redirect("/dashboard");
+
+  const { t } = await getT();
 
   return (
     <div className="py-6">
       <section className="text-center">
-        <p className="text-xs uppercase tracking-[0.22em] text-gold">Fajr, together</p>
-        <h1 className="mt-4 text-4xl font-bold leading-[1.1] tracking-tight sm:text-6xl">
-          The hardest prayer
+        <p className="text-xs uppercase text-gold">{t.landing.eyebrow}</p>
+        <h1 className="mt-4 text-4xl font-bold leading-[1.15] sm:text-6xl">
+          {t.landing.titleTop}
           <br />
-          <span className="dawn-text">is easier with company.</span>
+          <span className="dawn-text">{t.landing.titleBottom}</span>
         </h1>
         <p className="mx-auto mt-5 max-w-xl text-base text-muted sm:text-lg">
-          Make a group, invite your friends or family, and build a streak nobody wants to be the
-          first to break.
+          {t.landing.subtitle}
         </p>
 
         <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
@@ -25,63 +49,40 @@ export default async function Home() {
             href="/login"
             className="w-full rounded-xl bg-gradient-to-r from-gold to-rose px-6 py-3 text-sm font-semibold text-night transition hover:brightness-110 sm:w-auto"
           >
-            Start a group
+            {t.landing.ctaPrimary}
           </Link>
           <Link
             href="/login"
             className="w-full rounded-xl border border-line bg-surface-2/60 px-6 py-3 text-sm font-semibold transition hover:bg-surface-2 sm:w-auto"
           >
-            I have an invite
+            {t.landing.ctaSecondary}
           </Link>
         </div>
       </section>
 
       <section className="mt-16 grid gap-4 sm:grid-cols-3">
-        <Feature
-          icon="🕰️"
-          title="The window is the point"
-          body="You can only log between the adhan and شروق الشمس, computed for your city and today's date. Not before. Not after."
-        />
-        <Feature
-          icon="⚡"
-          title="Earlier beats later"
-          body="The window splits into thirds. Praying right after the adhan is worth 3 points; scraping in before sunrise is worth 1."
-        />
-        <Feature
-          icon="🛡️"
-          title="One miss won't end you"
-          body="Two grace days a month protect your streak. They score nothing — they just stop a single miss from wiping out 40 days."
-        />
+        {t.landing.features.map((f) => (
+          <div key={f.title} className="card p-5">
+            <div className="text-2xl">{f.icon}</div>
+            <h3 className="mt-3 font-semibold">{f.title}</h3>
+            <p className="mt-1.5 text-sm leading-relaxed text-muted">{f.body}</p>
+          </div>
+        ))}
       </section>
 
       <section className="card mt-6 p-6 sm:p-8">
-        <h2 className="text-lg font-semibold">How the scoring works</h2>
+        <h2 className="text-lg font-semibold">{t.landing.scoringTitle}</h2>
         <div className="mt-5 grid gap-3 sm:grid-cols-3">
-          <Tier tone="gold" pts="3" label="First light" ar="الوقت المختار" note="First third of the window" />
-          <Tier tone="rose" pts="2" label="On time" ar="في الوقت" note="Middle third" />
-          <Tier tone="muted" pts="1" label="Just in time" ar="قبل الشروق" note="Last third before sunrise" />
+          <Tier tone="gold" pts={TIER_POINTS.early} name={t.tiers.early.name} note={t.tiers.early.note} />
+          <Tier tone="rose" pts={TIER_POINTS.middle} name={t.tiers.middle.name} note={t.tiers.middle.note} />
+          <Tier tone="muted" pts={TIER_POINTS.late} name={t.tiers.late.name} note={t.tiers.late.note} />
         </div>
         <p className="mt-5 border-t border-line pt-4 text-sm text-muted">
-          Praying in congregation adds <strong className="text-teal">+2</strong>. Your group ranks by
-          points this week, this month, and all time — plus a shared streak for days when{" "}
-          <em>everyone</em> makes it.
+          {t.landing.scoringNote}
         </p>
       </section>
 
-      <p className="mx-auto mt-10 max-w-lg text-center text-sm text-dim">
-        Nothing here can prove you prayed — that stays between you and Allah. What it can do is make
-        sure you were awake, and that your friends will notice if you weren&rsquo;t.
-      </p>
-    </div>
-  );
-}
-
-function Feature({ icon, title, body }: { icon: string; title: string; body: string }) {
-  return (
-    <div className="card p-5">
-      <div className="text-2xl">{icon}</div>
-      <h3 className="mt-3 font-semibold">{title}</h3>
-      <p className="mt-1.5 text-sm leading-relaxed text-muted">{body}</p>
+      <p className="mx-auto mt-10 max-w-lg text-center text-sm text-dim">{t.landing.honest}</p>
     </div>
   );
 }
@@ -89,14 +90,12 @@ function Feature({ icon, title, body }: { icon: string; title: string; body: str
 function Tier({
   tone,
   pts,
-  label,
-  ar,
+  name,
   note,
 }: {
   tone: "gold" | "rose" | "muted";
-  pts: string;
-  label: string;
-  ar: string;
+  pts: number;
+  name: string;
   note: string;
 }) {
   const color = { gold: "text-gold", rose: "text-rose", muted: "text-muted" }[tone];
@@ -108,9 +107,8 @@ function Tier({
 
   return (
     <div className={`rounded-xl border p-4 ${ring}`}>
-      <p className={`text-2xl font-bold ${color}`}>{pts}</p>
-      <p className="mt-1 text-sm font-medium">{label}</p>
-      <p className={`ar text-sm ${color}`}>{ar}</p>
+      <p className={`tabular text-2xl font-bold ${color}`}>{pts}</p>
+      <p className={`mt-1 text-sm font-medium ${color}`}>{name}</p>
       <p className="mt-1 text-xs text-dim">{note}</p>
     </div>
   );

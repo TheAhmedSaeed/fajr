@@ -1,5 +1,8 @@
 # Fajr 🌅
 
+The interface is **Arabic by default, fully right-to-left**, with an English toggle in the
+header (remembered in a cookie).
+
 A group streak for Fajr. You create a group, invite people, and everyone checks in — but
 **only between the adhan and sunrise in their own city, on today's date.** There is no
 backfilling and no editing. That constraint is the whole product; the leaderboard is only
@@ -79,10 +82,16 @@ Fill in from **Project Settings → API**:
 **Authentication → URL Configuration**:
 
 - *Site URL* → your `NEXT_PUBLIC_SITE_URL`
-- *Redirect URLs* → add `http://localhost:3000/auth/callback` and
-  `https://your-domain.com/auth/callback`
+- *Redirect URLs* → add `http://localhost:3000/**` and `https://your-domain.com/**`
 
-Without the callback URL registered, magic links will bounce.
+Use the `/**` wildcard rather than the bare `/auth/callback` path. The sign-in link carries a
+`?next=` query string, and an exact-path entry does not always match it.
+
+**If you skip this, sign-in silently half-breaks rather than erroring:** Supabase quietly
+discards the redirect it was asked for and falls back to the Site URL, so the emailed link
+comes back as `...&redirect_to=http://localhost:3000` with no `/auth/callback` in it. The app
+now catches that case and forwards the code on itself, so sign-in still completes — but fix
+the allow-list anyway rather than relying on the fallback.
 
 ### 5. Run it
 
@@ -93,9 +102,17 @@ npm run dev
 
 ### Deploying
 
-Works on Vercel as-is. Set the same four environment variables in the project settings,
-with `NEXT_PUBLIC_SITE_URL` as your production origin, and add that origin's
-`/auth/callback` to the Supabase redirect list.
+Set the same four environment variables in your host's project settings, with
+`NEXT_PUBLIC_SITE_URL` as your production origin, and add that origin to the Supabase
+redirect list.
+
+**Railway:** generate a domain first (Settings → Networking → Generate Domain), then set
+`NEXT_PUBLIC_SITE_URL` to it — including `https://`, with no trailing slash — and redeploy.
+The redeploy is not optional: Next.js bakes `NEXT_PUBLIC_*` values into the build, so a
+variable added after the first deploy is not picked up until the app is rebuilt. `npm run
+build` / `npm run start` are already wired up, and `next start` honours Railway's `PORT`.
+
+**Vercel:** works as-is with the same four variables.
 
 > Supabase's built-in email service is rate-limited to a handful of messages an hour, which
 > is fine for a family group but will throttle a real launch. Plug in an SMTP provider under
@@ -148,6 +165,12 @@ npm test        # 26 tests, no database required
 npm run typecheck
 ```
 
+### Upgrading an existing database
+
+The Arabic release added `profiles.city_id`, which remembers *which* bundled city was picked
+so the name can be rendered in the reader's own language. Re-run `supabase/schema.sql` — it
+is idempotent and the new column is an `add column if not exists`, so nothing is lost.
+
 Twelve calculation methods are supported (Umm al-Qura, Egyptian, MWL, Karachi, ISNA,
 Diyanet, MUIS, and others); each bundled city defaults to the convention its local
 authority actually uses. High latitudes use `adhan`'s recommended rule, and locations
@@ -190,8 +213,6 @@ tests/               Unit tests for the prayer and scoring cores
   opened it.
 - **Nudges** — a one-tap "wake up" ping to group members whose window is open and who
   haven't logged.
-- **Full Arabic UI with RTL.** Arabic terms appear throughout, but the interface is English
-  with bilingual labels. A proper locale toggle is a contained change.
 - **Time-zone-aware group weeks.** Leaderboard periods currently use the *viewer's*
   calendar, which is intuitive but means two members in distant zones can briefly disagree
   about where a week ends.

@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { displayNameOf, getProfile, isOnboarded } from "@/lib/data";
+import { getT } from "@/lib/locale";
 import { LocationPicker } from "@/components/LocationPicker";
 
 export default async function OnboardingPage({
@@ -14,19 +15,20 @@ export default async function OnboardingPage({
   // Already set up and arriving here by hand — send them on.
   if (isOnboarded(profile) && !next) redirect("/dashboard");
 
+  const { locale, t } = await getT();
+
   return (
     <div className="mx-auto max-w-2xl py-4">
-      <p className="text-xs uppercase tracking-[0.22em] text-gold">One-time setup</p>
-      <h1 className="mt-3 text-3xl font-bold tracking-tight">Set your Fajr window</h1>
-      <p className="mt-2 text-muted">
-        Everything else depends on this: your check-in only opens between the adhan and sunrise in{" "}
-        <em>your</em> city, on today&rsquo;s date.
-      </p>
+      <p className="text-xs uppercase text-gold">{t.onboarding.eyebrow}</p>
+      <h1 className="mt-3 text-3xl font-bold">{t.onboarding.title}</h1>
+      <p className="mt-2 text-muted">{t.onboarding.subtitle}</p>
 
       <div className="mt-8">
         <LocationPicker
+          locale={locale}
           initial={{
             displayName: displayNameOf(profile),
+            cityId: profile.city_id,
             cityLabel: profile.city_label,
             latitude: profile.latitude,
             longitude: profile.longitude,
@@ -34,7 +36,7 @@ export default async function OnboardingPage({
             method: profile.calculation_method,
             madhab: profile.madhab,
           }}
-          submitLabel="Save and continue"
+          submitLabel={t.onboarding.submit}
           redirectTo={next && next.startsWith("/") && !next.startsWith("//") ? next : "/dashboard"}
         />
       </div>

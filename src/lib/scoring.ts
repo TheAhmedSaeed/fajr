@@ -15,12 +15,6 @@ export const TIER_POINTS: Record<Tier, number> = {
   late: 1,
 };
 
-export const TIER_LABELS: Record<Tier, { en: string; ar: string; blurb: string }> = {
-  early: { en: "First light", ar: "الوقت المختار", blurb: "First third of the window" },
-  middle: { en: "On time", ar: "في الوقت", blurb: "Middle third of the window" },
-  late: { en: "Just in time", ar: "قبل الشروق", blurb: "Last third before sunrise" },
-};
-
 /** Praying in congregation is its own axis, worth a flat bonus on top of the tier. */
 export const CONGREGATION_BONUS = 2;
 
@@ -167,49 +161,49 @@ export function graceUsedThisMonth(rows: LogRow[], date: string): number {
 /* Badges                                                              */
 /* ------------------------------------------------------------------ */
 
+/** Badge identity and progress only — names and requirements come from the dictionary. */
+export type BadgeId =
+  | "first"
+  | "streak7"
+  | "streak30"
+  | "streak40"
+  | "streak100"
+  | "early10"
+  | "early50"
+  | "jamaah10"
+  | "jamaah40";
+
 export type Badge = {
-  id: string;
+  id: BadgeId;
   icon: string;
-  name: string;
-  ar: string;
-  requirement: string;
   earned: boolean;
   /** 0..1 toward earning it. */
   progress: number;
 };
 
-function badge(
-  id: string,
-  icon: string,
-  name: string,
-  ar: string,
-  requirement: string,
-  have: number,
-  need: number,
-): Badge {
+function badge(id: BadgeId, icon: string, have: number, need: number): Badge {
   return {
     id,
     icon,
-    name,
-    ar,
-    requirement,
     earned: have >= need,
     progress: Math.min(1, need === 0 ? 1 : have / need),
   };
 }
 
 export function badgesFor(stats: Stats): Badge[] {
+  // Streak badges key off the best streak ever reached, so breaking a streak
+  // never confiscates a badge already earned.
   const best = Math.max(stats.currentStreak, stats.longestStreak);
   return [
-    badge("first", "🌅", "First Light", "أول فجر", "Log your first Fajr", stats.daysPrayed, 1),
-    badge("streak7", "🔥", "Week Strong", "أسبوع", "7-day streak", best, 7),
-    badge("streak30", "🌙", "Full Moon", "شهر", "30-day streak", best, 30),
-    badge("streak40", "🕋", "The Forty", "الأربعون", "40-day streak", best, 40),
-    badge("streak100", "💎", "Hundred", "المئة", "100-day streak", best, 100),
-    badge("early10", "⭐", "Early Riser", "المبكّر", "10 first-third check-ins", stats.earlyCount, 10),
-    badge("early50", "☀️", "Dawn Chaser", "ملازم الفجر", "50 first-third check-ins", stats.earlyCount, 50),
-    badge("jamaah10", "🕌", "Congregation", "الجماعة", "10 prayers in congregation", stats.congregationCount, 10),
-    badge("jamaah40", "🤲", "Forty in Jama'ah", "أربعون جماعة", "40 prayers in congregation", stats.congregationCount, 40),
+    badge("first", "\u{1F305}", stats.daysPrayed, 1),
+    badge("streak7", "\u{1F525}", best, 7),
+    badge("streak30", "\u{1F319}", best, 30),
+    badge("streak40", "\u{1F54B}", best, 40),
+    badge("streak100", "\u{1F48E}", best, 100),
+    badge("early10", "\u2B50", stats.earlyCount, 10),
+    badge("early50", "\u2600\uFE0F", stats.earlyCount, 50),
+    badge("jamaah10", "\u{1F54C}", stats.congregationCount, 10),
+    badge("jamaah40", "\u{1F932}", stats.congregationCount, 40),
   ];
 }
 

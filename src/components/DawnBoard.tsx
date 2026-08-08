@@ -1,5 +1,5 @@
 import type { Tier } from "@/lib/prayer";
-import { TIER_LABELS } from "@/lib/scoring";
+import type { Dict } from "@/lib/i18n";
 
 export type BoardEntry = {
   userId: string;
@@ -18,18 +18,16 @@ export type BoardEntry = {
  * window. This is the part that actually creates accountability — a leaderboard
  * is retrospective, but seeing who is still asleep is happening right now.
  */
-export function DawnBoard({ entries }: { entries: BoardEntry[] }) {
+export function DawnBoard({ entries, t }: { entries: BoardEntry[]; t: Dict }) {
   const done = entries.filter((e) => e.logged).length;
 
   return (
     <section className="card p-5">
-      <div className="flex items-baseline justify-between">
+      <div className="flex items-baseline justify-between gap-3">
         <h2 className="text-sm font-semibold">
-          Dawn board <span className="ar text-muted">· اليوم</span>
+          {t.group.boardTitle} <span className="text-muted">· {t.group.boardToday}</span>
         </h2>
-        <span className="tabular text-xs text-dim">
-          {done}/{entries.length} in
-        </span>
+        <span className="tabular text-xs text-dim">{t.group.boardCount(done, entries.length)}</span>
       </div>
 
       <ul className="mt-4 space-y-2">
@@ -45,18 +43,16 @@ export function DawnBoard({ entries }: { entries: BoardEntry[] }) {
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-medium">
                 {e.name}
-                {e.isYou && <span className="ml-1.5 text-xs text-dim">(you)</span>}
+                {e.isYou && <span className="ms-1.5 text-xs text-dim">{t.group.you}</span>}
               </p>
               <p className="truncate text-xs text-dim">
-                {e.cityLabel ?? "—"} · Fajr {e.fajrLabel}
+                {e.cityLabel ?? "—"} · {t.group.fajrAt(e.fajrLabel)}
               </p>
             </div>
 
-            <div className="shrink-0 text-right">
-              <StatusText entry={e} />
-              {e.streak > 0 && (
-                <p className="tabular text-[11px] text-dim">🔥 {e.streak}</p>
-              )}
+            <div className="shrink-0 text-end">
+              <StatusText entry={e} t={t} />
+              {e.streak > 0 && <p className="tabular text-[11px] text-dim">🔥 {e.streak}</p>}
             </div>
           </li>
         ))}
@@ -81,9 +77,7 @@ function Lamp({ entry }: { entry: BoardEntry }) {
   }
 
   const tone =
-    entry.state === "open"
-      ? "bg-gold/10 text-gold ring-1 ring-gold/30"
-      : "bg-surface-2 text-dim";
+    entry.state === "open" ? "bg-gold/10 text-gold ring-1 ring-gold/30" : "bg-surface-2 text-dim";
 
   return (
     <span
@@ -95,22 +89,21 @@ function Lamp({ entry }: { entry: BoardEntry }) {
   );
 }
 
-function StatusText({ entry }: { entry: BoardEntry }) {
+function StatusText({ entry, t }: { entry: BoardEntry; t: Dict }) {
   if (entry.logged) {
     if (entry.logged.kind === "grace") {
-      return <p className="text-xs font-medium text-violet">Grace day</p>;
+      return <p className="text-xs font-medium text-violet">{t.group.stateGrace}</p>;
     }
-    const tier = entry.logged.tier ? TIER_LABELS[entry.logged.tier] : null;
     return (
       <p className="text-xs font-medium text-teal">
-        {tier?.en ?? "Logged"}
+        {entry.logged.tier ? t.tiers[entry.logged.tier].name : t.group.stateLogged}
         {entry.logged.inCongregation && " 🕌"}
       </p>
     );
   }
 
-  if (entry.state === "open") return <p className="text-xs font-medium text-gold">Window open</p>;
-  if (entry.state === "before") return <p className="text-xs text-dim">Before Fajr</p>;
-  if (entry.state === "closed") return <p className="text-xs text-rose">Missed</p>;
-  return <p className="text-xs text-dim">No location</p>;
+  if (entry.state === "open") return <p className="text-xs font-medium text-gold">{t.group.stateOpen}</p>;
+  if (entry.state === "before") return <p className="text-xs text-dim">{t.group.stateBefore}</p>;
+  if (entry.state === "closed") return <p className="text-xs text-rose">{t.group.stateMissed}</p>;
+  return <p className="text-xs text-dim">{t.group.stateUnknown}</p>;
 }

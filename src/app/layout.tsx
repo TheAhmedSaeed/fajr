@@ -2,12 +2,14 @@ import type { Metadata, Viewport } from "next";
 import Link from "next/link";
 import "./globals.css";
 import { getProfile } from "@/lib/data";
-import { signOut } from "./actions";
+import { getT } from "@/lib/locale";
+import { dirOf } from "@/lib/i18n";
+import { setLocale, signOut } from "./actions";
 
 export const metadata: Metadata = {
-  title: "Fajr — pray it on time, together",
+  title: "الفجر — صلّه في وقته، معًا",
   description:
-    "A group streak for Fajr. Check in only between the adhan and sunrise, wherever you are.",
+    "سلسلة جماعية لصلاة الفجر. سجّل فقط بين الأذان وشروق الشمس، أينما كنت.",
 };
 
 export const viewport: Viewport = {
@@ -15,10 +17,11 @@ export const viewport: Viewport = {
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const profile = await getProfile();
+  const [profile, { locale, t }] = await Promise.all([getProfile(), getT()]);
+  const dir = dirOf(locale);
 
   return (
-    <html lang="en">
+    <html lang={locale} dir={dir}>
       <body>
         <div className="dawn-bg" />
 
@@ -26,8 +29,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-3">
             <Link href={profile ? "/dashboard" : "/"} className="flex items-center gap-2">
               <span className="text-lg">🌅</span>
-              <span className="text-base font-bold tracking-tight">
-                Fajr<span className="text-gold">.</span>
+              <span className="text-base font-bold">
+                {locale === "ar" ? "الفجر" : "Fajr"}
+                <span className="text-gold">.</span>
               </span>
             </Link>
 
@@ -38,17 +42,17 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                     href="/dashboard"
                     className="rounded-lg px-3 py-1.5 text-muted transition hover:bg-surface-2 hover:text-ink"
                   >
-                    Dashboard
+                    {t.nav.dashboard}
                   </Link>
                   <Link
                     href="/settings"
                     className="rounded-lg px-3 py-1.5 text-muted transition hover:bg-surface-2 hover:text-ink"
                   >
-                    Settings
+                    {t.nav.settings}
                   </Link>
                   <form action={signOut}>
                     <button className="rounded-lg px-3 py-1.5 text-muted transition hover:bg-surface-2 hover:text-ink">
-                      Sign out
+                      {t.nav.signOut}
                     </button>
                   </form>
                 </>
@@ -57,9 +61,19 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                   href="/login"
                   className="rounded-lg bg-gradient-to-r from-gold to-rose px-4 py-1.5 font-semibold text-night transition hover:brightness-110"
                 >
-                  Sign in
+                  {t.nav.signIn}
                 </Link>
               )}
+
+              <form action={setLocale}>
+                <input type="hidden" name="locale" value={locale === "ar" ? "en" : "ar"} />
+                <button
+                  aria-label={t.nav.switchLabel}
+                  className="rounded-lg border border-line px-2.5 py-1.5 text-xs text-muted transition hover:bg-surface-2 hover:text-ink"
+                >
+                  {t.nav.switchTo}
+                </button>
+              </form>
             </nav>
           </div>
         </header>
@@ -67,8 +81,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <main className="mx-auto max-w-5xl px-4 py-8">{children}</main>
 
         <footer className="mx-auto max-w-5xl px-4 pb-10 pt-4 text-center text-xs text-dim">
-          Prayer times computed locally with the calculation method you choose. Check-in is
-          verified against your own city&rsquo;s window — never a shared clock.
+          {t.footer}
         </footer>
       </body>
     </html>
