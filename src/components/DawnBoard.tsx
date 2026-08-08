@@ -25,7 +25,8 @@ export function DawnBoard({ entries, t }: { entries: BoardEntry[]; t: Dict }) {
     <section className="card p-5">
       <div className="flex items-baseline justify-between gap-3">
         <h2 className="text-sm font-semibold">
-          {t.group.boardTitle} <span className="text-muted">· {t.group.boardToday}</span>
+          {t.group.boardTitle}
+          {t.group.boardToday && <span className="text-muted"> · {t.group.boardToday}</span>}
         </h2>
         <span className="tabular text-xs text-dim">{t.group.boardCount(done, entries.length)}</span>
       </div>

@@ -263,15 +263,9 @@ function ThirdsBar({ t, progress, isRtl }: { t: Dict; progress: number; isRtl: b
         />
       </div>
       <div className="mt-1.5 flex justify-between text-[10px] uppercase text-dim">
-        <span className="text-gold">
-          {TIER_POINTS.early} {t.checkIn.pts}
-        </span>
-        <span className="text-rose">
-          {TIER_POINTS.middle} {t.checkIn.pts}
-        </span>
-        <span>
-          {TIER_POINTS.late} {t.checkIn.pts}
-        </span>
+        <span className="text-gold">{t.checkIn.ptsShort(TIER_POINTS.early)}</span>
+        <span className="text-rose">{t.checkIn.ptsShort(TIER_POINTS.middle)}</span>
+        <span>{t.checkIn.ptsShort(TIER_POINTS.late)}</span>
       </div>
     </div>
   );
