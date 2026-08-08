@@ -59,7 +59,31 @@ export async function signIn(_prev: ActionResult | null, formData: FormData): Pr
     options: { emailRedirectTo: `${origin}/auth/callback?next=${encodeURIComponent(next)}` },
   });
 
-  if (error) return { ok: false, error: error.message };
+  if (error) {
+    // The visitor gets a message they can act on; the operator gets the real
+    // reason in the server log. Delivery failures are almost always SMTP
+    // configuration, and the provider's own wording is English-only and often
+    // mentions internals that should not reach a sign-in form.
+    console.error("[signIn] Supabase rejected the OTP request", {
+      status: error.status,
+      code: error.code,
+      message: error.message,
+      origin,
+    });
+
+    const text = error.message.toLowerCase();
+    if (error.status === 429 || text.includes("rate limit")) {
+      return { ok: false, error: t.errors.rateLimited };
+    }
+    if (text.includes("sending") || text.includes("smtp") || text.includes("mail")) {
+      return { ok: false, error: t.errors.emailSendFailed };
+    }
+    return { ok: false, error: error.message };
+  }
+
+  // Supabase returns success once the message is queued, not once it is
+  // delivered, so a successful call here is not proof anything arrived.
+  console.info("[signIn] OTP queued", { origin });
   return { ok: true, message: t.errors.magicLinkSent(email) };
 }
 

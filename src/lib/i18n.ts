@@ -287,6 +287,9 @@ const ar = {
     notSignedIn: "لست مسجّل الدخول.",
     invalidEmail: "أدخل بريدًا إلكترونيًا صحيحًا.",
     magicLinkSent: (email: string) => `تحقّق من ${email} للحصول على رابط الدخول.`,
+    rateLimited: "أُرسلت رسائل كثيرة في وقت قصير. انتظر دقائق ثم أعد المحاولة.",
+    emailSendFailed:
+      "تعذّر إرسال رسالة الدخول. المشكلة في إعدادات البريد لا في حسابك — أعد المحاولة بعد قليل.",
     pickName: "اختر اسمًا تعرفه مجموعتك.",
     pickCity: "اختر مدينة، أو اسمح بالوصول إلى موقعك.",
     pickMethod: "اختر طريقة حساب.",
@@ -580,6 +583,9 @@ const en: Dict = {
     notSignedIn: "You are not signed in.",
     invalidEmail: "Enter a valid email address.",
     magicLinkSent: (email: string) => `Check ${email} for your sign-in link.`,
+    rateLimited: "Too many emails sent in a short time. Wait a few minutes and try again.",
+    emailSendFailed:
+      "The sign-in email could not be sent. This is a mail configuration problem, not your account — try again shortly.",
     pickName: "Pick a name your group will recognise.",
     pickCity: "Choose a city, or allow location access.",
     pickMethod: "Pick a calculation method.",

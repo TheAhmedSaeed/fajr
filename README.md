@@ -121,9 +121,34 @@ the app is rebuilt.
 
 **Vercel:** works as-is with the same four variables.
 
-> Supabase's built-in email service is rate-limited to a handful of messages an hour, which
-> is fine for a family group but will throttle a real launch. Plug in an SMTP provider under
-> **Authentication → Emails** before inviting a crowd.
+### Email
+
+Supabase's built-in email service is rate-limited to a handful of messages an hour,
+project-wide. That is not enough to onboard even a small group, so configure your own SMTP
+under **Authentication → Emails** before inviting anyone.
+
+Two settings, not one: configuring SMTP does **not** raise the cap. Also raise the email
+limit under **Authentication → Rate Limits**, which stays at the low default until changed.
+
+**If sign-in reports success but no mail arrives**, `signInWithOtp` returned OK because the
+message was *queued*, not delivered — so the failure is downstream and will not appear in the
+app. Check, in order:
+
+1. **Supabase → Logs → Auth.** An SMTP rejection is recorded here with the provider's reason.
+   Nothing logged at all means the request never reached Supabase.
+2. **Your provider's own log** (Resend → Emails, SendGrid → Activity). Present but bounced or
+   blocked is a deliverability problem; absent entirely means the credentials point somewhere
+   other than you think.
+3. **Sender address.** It must be on a domain you have verified with the provider. Most
+   providers accept the SMTP connection and then reject the message when the From address is
+   unverified, which looks exactly like silence.
+4. **Port and username.** Port 465 is implicit TLS, 587 is STARTTLS — the wrong pairing fails
+   quietly. Providers often want a literal username rather than your email (Resend uses
+   `resend`, with the API key as the password).
+
+The app logs the underlying error from Supabase to the server console on every failed
+sign-in, so your host's logs (Railway → Deployments → Logs) will show the real reason
+alongside whatever the user was told.
 
 ---
 
