@@ -3,7 +3,6 @@ import {
   CalculationMethod,
   CalculationParameters,
   HighLatitudeRule,
-  Madhab,
   PolarCircleResolution,
   PrayerTimes,
 } from "adhan";
@@ -39,18 +38,27 @@ export const CALCULATION_METHODS = [
 ] as const;
 
 export type MethodId = (typeof CALCULATION_METHODS)[number]["id"];
-export type MadhabId = "Shafi" | "Hanafi";
+
+/**
+ * Used whenever a location does not imply its own convention — a dropped pin,
+ * or a profile saved before the method was chosen automatically.
+ */
+export const DEFAULT_METHOD: MethodId = "UmmAlQura";
 
 export function isMethodId(v: string): v is MethodId {
   return CALCULATION_METHODS.some((m) => m.id === v);
 }
 
+/**
+ * Madhab is deliberately absent. It only changes the Asr shadow ratio — verified
+ * to shift Asr by over an hour while leaving Fajr and sunrise byte-identical —
+ * and this app computes nothing but Fajr and sunrise.
+ */
 export type PrayerLocation = {
   latitude: number;
   longitude: number;
   timezone: string;
   method: MethodId;
-  madhab: MadhabId;
 };
 
 /** Where in the Fajr window a check-in landed. */
@@ -110,7 +118,6 @@ function calendarDay(date: string): Date {
 function paramsFor(loc: PrayerLocation): CalculationParameters {
   const coords = new Coordinates(loc.latitude, loc.longitude);
   const params = CalculationMethod[loc.method]();
-  params.madhab = Madhab[loc.madhab];
   // `recommended` picks MiddleOfTheNight above ~48° and the twilight angle below it.
   params.highLatitudeRule = HighLatitudeRule.recommended(coords);
   // Without this, latitudes inside the polar circle return Invalid Date in summer.

@@ -12,7 +12,7 @@ import {
 import { getT } from "@/lib/locale";
 import { getOrigin } from "@/lib/site-url";
 import { displayCity } from "@/lib/cities";
-import { formatTime, isMethodId, isValidWindow, localDate, todayView, type MadhabId } from "@/lib/prayer";
+import { DEFAULT_METHOD, formatTime, isMethodId, isValidWindow, localDate, todayView } from "@/lib/prayer";
 import {
   computeGroupStats,
   computeStats,
@@ -35,8 +35,7 @@ function locationOfMember(m: Member) {
     latitude: m.latitude,
     longitude: m.longitude,
     timezone: m.timezone,
-    method: isMethodId(m.calculation_method) ? m.calculation_method : ("MuslimWorldLeague" as const),
-    madhab: (m.madhab === "Hanafi" ? "Hanafi" : "Shafi") as MadhabId,
+    method: isMethodId(m.calculation_method) ? m.calculation_method : DEFAULT_METHOD,
   };
 }
 

@@ -1,5 +1,5 @@
 import { createClient } from "./supabase/server";
-import { isMethodId, type MadhabId, type PrayerLocation } from "./prayer";
+import { DEFAULT_METHOD, isMethodId, type PrayerLocation } from "./prayer";
 import type { LogRow } from "./scoring";
 
 export type Profile = {
@@ -12,7 +12,6 @@ export type Profile = {
   longitude: number | null;
   timezone: string | null;
   calculation_method: string;
-  madhab: string;
   created_at: string;
 };
 
@@ -37,7 +36,6 @@ export type Member = {
   longitude: number | null;
   timezone: string | null;
   calculation_method: string;
-  madhab: string;
 };
 
 /** A profile is only usable once it has a location; until then we send the user to onboarding. */
@@ -51,8 +49,7 @@ export function locationOf(p: Profile): PrayerLocation | null {
     latitude: p.latitude,
     longitude: p.longitude,
     timezone: p.timezone,
-    method: isMethodId(p.calculation_method) ? p.calculation_method : "MuslimWorldLeague",
-    madhab: (p.madhab === "Hanafi" ? "Hanafi" : "Shafi") as MadhabId,
+    method: isMethodId(p.calculation_method) ? p.calculation_method : DEFAULT_METHOD,
   };
 }
 
@@ -127,7 +124,7 @@ export async function getMembers(groupId: string): Promise<Member[]> {
 
   const { data: profiles } = await supabase
     .from("profiles")
-    .select("id, display_name, city_label, city_id, latitude, longitude, timezone, calculation_method, madhab")
+    .select("id, display_name, city_label, city_id, latitude, longitude, timezone, calculation_method")
     .in("id", ids);
 
   const byId = new Map((profiles ?? []).map((p) => [p.id as string, p]));
@@ -144,8 +141,7 @@ export async function getMembers(groupId: string): Promise<Member[]> {
       latitude: (p?.latitude as number | null) ?? null,
       longitude: (p?.longitude as number | null) ?? null,
       timezone: (p?.timezone as string | null) ?? null,
-      calculation_method: (p?.calculation_method as string) ?? "MuslimWorldLeague",
-      madhab: (p?.madhab as string) ?? "Shafi",
+      calculation_method: (p?.calculation_method as string) ?? DEFAULT_METHOD,
     };
   });
 }

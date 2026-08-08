@@ -18,7 +18,6 @@ const riyadh = {
   longitude: 46.6753,
   timezone: "Asia/Riyadh",
   method: "UmmAlQura",
-  madhab: "Shafi",
 };
 
 test("addDays and daysBetween handle month and year boundaries", () => {
@@ -50,7 +49,6 @@ test("prayer times match published values", () => {
     longitude: -0.1278,
     timezone: "Europe/London",
     method: "MuslimWorldLeague",
-    madhab: "Shafi",
   };
   assert.equal(formatTime(windowFor(london, "2026-12-21").sunrise, "Europe/London"), "08:04");
 });
@@ -62,7 +60,6 @@ test("computed window always falls on the requested calendar date", () => {
       longitude: city.longitude,
       timezone: city.timezone,
       method: city.method,
-      madhab: "Shafi",
     };
     for (const date of ["2026-01-15", "2026-06-21", "2026-12-21"]) {
       const w = windowFor(loc, date);
@@ -87,7 +84,6 @@ test("polar latitudes resolve instead of returning Invalid Date", () => {
     longitude: 18.956,
     timezone: "Europe/Oslo",
     method: "MuslimWorldLeague",
-    madhab: "Shafi",
   };
   const w = windowFor(tromso, "2026-06-21"); // midnight sun
   assert.ok(isValidWindow(w), "Tromsø midsummer should still produce a usable window");
@@ -134,7 +130,6 @@ test("a user's day boundary follows their timezone, not the server's", () => {
     longitude: -118.2437,
     timezone: "America/Los_Angeles",
     method: "NorthAmerica",
-    madhab: "Shafi",
   };
   // 08:00Z on 6 Aug is still the evening of 5 Aug in Los Angeles.
   const view = todayView(la, new Date("2026-08-06T08:00:00Z"));

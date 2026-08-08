@@ -7,11 +7,11 @@ import { CITIES, cityForTimezone, cityName, searchCities, type City } from "@/li
 import { getDict, type Locale } from "@/lib/i18n";
 import {
   CALCULATION_METHODS,
+  DEFAULT_METHOD,
   formatTime,
   isValidWindow,
   localDate,
   todayView,
-  type MadhabId,
   type MethodId,
 } from "@/lib/prayer";
 
@@ -25,7 +25,6 @@ type Props = {
     longitude: number | null;
     timezone: string | null;
     method: string;
-    madhab: string;
   };
   submitLabel: string;
   /** Where to send the user after a successful save. Omit to stay on the page. */
@@ -45,10 +44,12 @@ export function LocationPicker({ locale, initial, submitLabel, redirectTo }: Pro
       : null,
   );
   const [timezone, setTimezone] = useState(initial.timezone ?? "");
+  // Not user-facing: each bundled city carries the convention its own local
+  // authority uses, so picking a city picks the method. A dropped pin falls back
+  // to the default.
   const [method, setMethod] = useState<MethodId>(
-    (CALCULATION_METHODS.find((m) => m.id === initial.method)?.id ?? "MuslimWorldLeague") as MethodId,
+    (CALCULATION_METHODS.find((m) => m.id === initial.method)?.id ?? DEFAULT_METHOD) as MethodId,
   );
-  const [madhab, setMadhab] = useState<MadhabId>(initial.madhab === "Hanafi" ? "Hanafi" : "Shafi");
   const [geoError, setGeoError] = useState<string | null>(null);
 
   const results = useMemo(() => searchCities(query), [query]);
@@ -80,7 +81,7 @@ export function LocationPicker({ locale, initial, submitLabel, redirectTo }: Pro
         setCityLabel(
           near ? cityName(near, locale) : (tz.split("/").pop()?.replace(/_/g, " ") ?? tz),
         );
-        if (near) setMethod(near.method);
+        setMethod(near ? near.method : DEFAULT_METHOD);
       },
       () => setGeoError(t.picker.geoBlocked),
     );
@@ -91,7 +92,7 @@ export function LocationPicker({ locale, initial, submitLabel, redirectTo }: Pro
     if (!coords || !timezone) return null;
     try {
       const view = todayView(
-        { latitude: coords.lat, longitude: coords.lng, timezone, method, madhab },
+        { latitude: coords.lat, longitude: coords.lng, timezone, method },
         new Date(),
       );
       if (!isValidWindow(view.window)) return null;
@@ -103,7 +104,7 @@ export function LocationPicker({ locale, initial, submitLabel, redirectTo }: Pro
     } catch {
       return null;
     }
-  }, [coords, timezone, method, madhab]);
+  }, [coords, timezone, method]);
 
   const popular = CITIES.slice(0, 6);
 
@@ -115,7 +116,6 @@ export function LocationPicker({ locale, initial, submitLabel, redirectTo }: Pro
       <input type="hidden" name="city_label" value={cityLabel} />
       <input type="hidden" name="city_id" value={cityId} />
       <input type="hidden" name="calculation_method" value={method} />
-      <input type="hidden" name="madhab" value={madhab} />
       {redirectTo && <input type="hidden" name="redirect_to" value={redirectTo} />}
 
       {/* Name ---------------------------------------------------------- */}
@@ -222,47 +222,6 @@ export function LocationPicker({ locale, initial, submitLabel, redirectTo }: Pro
         )}
       </div>
 
-      {/* Method -------------------------------------------------------- */}
-      <div className="card p-5">
-        <label htmlFor="method" className="block text-sm font-medium">
-          {t.picker.methodLabel}
-        </label>
-        <p className="mt-1 text-xs text-muted">{t.picker.methodHelp}</p>
-        <select
-          id="method"
-          value={method}
-          onChange={(e) => setMethod(e.target.value as MethodId)}
-          className="mt-2.5 w-full rounded-xl border border-line bg-night px-3.5 py-2.5 text-sm outline-none transition focus:border-gold/60"
-        >
-          {CALCULATION_METHODS.map((m) => (
-            <option key={m.id} value={m.id}>
-              {t.methods[m.id].label} — {t.methods[m.id].note}
-            </option>
-          ))}
-        </select>
-
-        <fieldset className="mt-4">
-          <legend className="text-sm font-medium">{t.picker.madhabLabel}</legend>
-          <p className="mt-1 text-xs text-muted">{t.picker.madhabHelp}</p>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {(["Shafi", "Hanafi"] as const).map((m) => (
-              <button
-                key={m}
-                type="button"
-                onClick={() => setMadhab(m)}
-                className={`rounded-xl border px-4 py-2 text-sm transition ${
-                  madhab === m
-                    ? "border-gold/50 bg-gold/10 text-gold"
-                    : "border-line bg-surface-2/60 text-muted hover:text-ink"
-                }`}
-              >
-                {m === "Shafi" ? t.picker.madhabShafi : t.picker.madhabHanafi}
-              </button>
-            ))}
-          </div>
-        </fieldset>
-      </div>
-
       {/* Preview ------------------------------------------------------- */}
       {preview && (
         <div className="card border-gold/20 p-5">
@@ -281,6 +240,7 @@ export function LocationPicker({ locale, initial, submitLabel, redirectTo }: Pro
           <p className="mt-3 text-xs text-dim">
             <span className="tabular">{preview.date}</span> — {t.picker.previewNote}
           </p>
+          <p className="mt-1 text-xs text-dim">{t.picker.methodInUse(t.methods[method].label)}</p>
         </div>
       )}
 

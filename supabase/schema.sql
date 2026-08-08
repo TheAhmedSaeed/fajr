@@ -16,8 +16,10 @@ create table if not exists public.profiles (
   latitude           double precision,
   longitude          double precision,
   timezone           text,
-  calculation_method text not null default 'MuslimWorldLeague',
-  madhab             text not null default 'Shafi' check (madhab in ('Shafi', 'Hanafi')),
+  -- Not user-facing: set from the city that was picked, since each bundled city
+  -- carries the convention its own local authority uses. Umm al-Qura is the
+  -- fallback for a dropped pin.
+  calculation_method text not null default 'UmmAlQura',
   created_at         timestamptz not null default now()
 );
 
@@ -25,6 +27,12 @@ create table if not exists public.profiles (
 -- name can be shown in the reader's own language. Free-text `city_label` stays
 -- as the fallback for pinned coordinates.
 alter table public.profiles add column if not exists city_id text;
+
+-- Madhab was dropped from the app: it only changes the Asr shadow ratio, and
+-- nothing here computes anything but Fajr and sunrise. Existing databases keep
+-- the column (dropping it would be destructive); it is simply no longer read.
+alter table public.profiles alter column madhab drop not null;
+alter table public.profiles alter column calculation_method set default 'UmmAlQura';
 
 comment on column public.profiles.timezone is
   'IANA timezone. Every calendar-day boundary for this user is derived from it.';

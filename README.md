@@ -174,15 +174,30 @@ npm run typecheck
 
 ### Upgrading an existing database
 
-The Arabic release added `profiles.city_id`, which remembers *which* bundled city was picked
-so the name can be rendered in the reader's own language. Re-run `supabase/schema.sql` — it
-is idempotent and the new column is an `add column if not exists`, so nothing is lost.
+Re-run `supabase/schema.sql` after pulling — it is idempotent and every change is additive,
+so nothing is lost:
 
-Twelve calculation methods are supported (Umm al-Qura, Egyptian, MWL, Karachi, ISNA,
-Diyanet, MUIS, and others); each bundled city defaults to the convention its local
-authority actually uses. High latitudes use `adhan`'s recommended rule, and locations
-inside the polar circle fall back to `AqrabBalad` (nearest locality) rather than returning
-an invalid time.
+- `profiles.city_id` remembers *which* bundled city was picked, so its name renders in the
+  reader's own language rather than the one chosen by whoever set it.
+- `profiles.calculation_method` now defaults to `UmmAlQura`.
+- `profiles.madhab` is made nullable and is no longer read. The column is left in place
+  rather than dropped, since dropping it would be destructive; you can remove it by hand if
+  you want the table tidy.
+
+**The calculation method is not a user-facing setting.** Each bundled city carries the
+convention its own local authority uses — Umm al-Qura in Saudi, the Egyptian authority in
+Egypt and the Levant, ISNA in North America, and so on — so choosing a city chooses the
+method. Umm al-Qura is the fallback for a dropped pin. Twelve methods are supported
+internally; the picker was removed because it asked people to answer a question their city
+already answers.
+
+**Madhab is not stored or used at all.** It only changes the Asr shadow ratio: verified to
+move Asr by 78 minutes in Cairo while leaving Fajr and sunrise byte-identical. Since nothing
+here computes anything but Fajr and sunrise, it was a setting that could not affect any
+number on the screen.
+
+High latitudes use `adhan`'s recommended rule, and locations inside the polar circle fall
+back to `AqrabBalad` (nearest locality) rather than returning an invalid time.
 
 **Known limitation:** above the Arctic/Antarctic circles the nearest-locality substitution
 can place the resolved window on an adjacent local date, so the check-in button may not

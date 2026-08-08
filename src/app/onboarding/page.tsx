@@ -34,7 +34,6 @@ export default async function OnboardingPage({
             longitude: profile.longitude,
             timezone: profile.timezone,
             method: profile.calculation_method,
-            madhab: profile.madhab,
           }}
           submitLabel={t.onboarding.submit}
           redirectTo={next && next.startsWith("/") && !next.startsWith("//") ? next : "/dashboard"}

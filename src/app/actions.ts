@@ -91,7 +91,6 @@ export async function saveProfile(
   const latitude = Number(formData.get("latitude"));
   const longitude = Number(formData.get("longitude"));
   const method = String(formData.get("calculation_method") ?? "");
-  const madhab = String(formData.get("madhab") ?? "Shafi");
 
   if (!displayName) return { ok: false, error: t.errors.pickName };
   if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90) {
@@ -120,7 +119,6 @@ export async function saveProfile(
       longitude,
       timezone,
       calculation_method: method,
-      madhab: madhab === "Hanafi" ? "Hanafi" : "Shafi",
     })
     .eq("id", user.id);
 

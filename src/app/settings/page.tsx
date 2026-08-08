@@ -28,7 +28,6 @@ export default async function SettingsPage() {
             longitude: profile.longitude,
             timezone: profile.timezone,
             method: profile.calculation_method,
-            madhab: profile.madhab,
           }}
           submitLabel={t.settings.submit}
         />

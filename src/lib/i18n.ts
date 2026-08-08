@@ -30,7 +30,7 @@ const ar = {
     switchLabel: "تغيير اللغة إلى الإنجليزية",
   },
   footer:
-    "تُحسب أوقات الصلاة محليًا بطريقة الحساب التي تختارها. ويُتحقَّق من التسجيل مقابل نافذة مدينتك أنت — لا ساعة مشتركة.",
+    "تُحسب أوقات الصلاة محليًا حسب مدينتك. ويُتحقَّق من التسجيل مقابل نافذة مدينتك أنت — لا ساعة مشتركة.",
 
   landing: {
     eyebrow: "الفجر، معًا",
@@ -99,16 +99,11 @@ const ar = {
     change: "تغيير",
     geoUnsupported: "هذا المتصفح لا يستطيع مشاركة موقعك. اختر مدينة بدلًا من ذلك.",
     geoBlocked: "تم حظر الوصول للموقع. اختر مدينة من القائمة بدلًا من ذلك.",
-    methodLabel: "طريقة الحساب",
-    methodHelp: "تختلف الجهات في زاوية الشمس عند الفجر. اختر ما يوافق مسجدك.",
-    madhabLabel: "المذهب",
-    madhabHelp: "يؤثر على العصر فقط — لن يغيّر نافذة الفجر.",
-    madhabShafi: "شافعي / مالكي / حنبلي",
-    madhabHanafi: "حنفي",
     previewTitle: "نافذتك اليوم",
     previewFajr: "أذان الفجر",
     previewSunrise: "الشروق",
     previewNote: "التسجيل مفتوح فقط بين هذين الوقتين.",
+    methodInUse: (m: string) => `محسوبة بطريقة ${m}`,
     pickCityFirst: "اختر مدينة للمتابعة.",
     saving: "جارٍ الحفظ…",
   },
@@ -152,7 +147,7 @@ const ar = {
     nextAt: (t: string) => `غدًا في ${t}`,
     pts: "نقاط",
     unavailable:
-      "تعذّر تحديد الفجر والشروق لموقعك اليوم. جرّب طريقة حساب مختلفة في",
+      "تعذّر تحديد الفجر والشروق لموقعك اليوم. جرّب اختيار مدينة أقرب من",
     unavailableLink: "الإعدادات",
   },
 
@@ -324,7 +319,7 @@ const en: Dict = {
     switchLabel: "Switch language to Arabic",
   },
   footer:
-    "Prayer times computed locally with the calculation method you choose. Check-in is verified against your own city's window — never a shared clock.",
+    "Prayer times computed locally from your city. Check-in is verified against your own city's window — never a shared clock.",
 
   landing: {
     eyebrow: "Fajr, together",
@@ -393,16 +388,11 @@ const en: Dict = {
     change: "Change",
     geoUnsupported: "This browser can't share your location. Pick a city instead.",
     geoBlocked: "Location was blocked. Pick a city from the list instead.",
-    methodLabel: "Calculation method",
-    methodHelp: "Authorities differ on the sun's angle at Fajr. Match your local mosque.",
-    madhabLabel: "Madhab",
-    madhabHelp: "Affects Asr only — it will not change your Fajr window.",
-    madhabShafi: "Shafi'i / Maliki / Hanbali",
-    madhabHanafi: "Hanafi",
     previewTitle: "Your window today",
     previewFajr: "Fajr adhan",
     previewSunrise: "Sunrise",
     previewNote: "Check-in is open only between these two times.",
+    methodInUse: (m: string) => `Calculated using ${m}`,
     pickCityFirst: "Pick a city to continue.",
     saving: "Saving…",
   },
@@ -447,7 +437,7 @@ const en: Dict = {
     nextAt: (t: string) => `Tomorrow at ${t}`,
     pts: "pts",
     unavailable:
-      "Fajr and sunrise could not be resolved for your location today. Try a different calculation method in",
+      "Fajr and sunrise could not be resolved for your location today. Try picking a nearer city in",
     unavailableLink: "settings",
   },
 
