@@ -174,6 +174,9 @@ npm run typecheck
 
 ### Upgrading an existing database
 
+If you see **`Could not find the 'city_id' column of 'profiles' in the schema cache`**, this
+is the step you are missing.
+
 Re-run `supabase/schema.sql` after pulling — it is idempotent and every change is additive,
 so nothing is lost:
 
@@ -183,6 +186,12 @@ so nothing is lost:
 - `profiles.madhab` is made nullable and is no longer read. The column is left in place
   rather than dropped, since dropping it would be destructive; you can remove it by hand if
   you want the table tidy.
+
+The file ends with `notify pgrst, 'reload schema'`, because PostgREST answers from a cached
+copy of the schema and can keep reporting a column as missing for a while after it exists.
+Onboarding also survives the un-migrated case: `city_id` only decides whether a city name can
+be translated, so if the column is absent the save retries without it rather than blocking
+you.
 
 **The calculation method is not a user-facing setting.** Each bundled city carries the
 convention its own local authority uses — Umm al-Qura in Saudi, the Egyptian authority in

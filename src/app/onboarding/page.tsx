@@ -19,9 +19,19 @@ export default async function OnboardingPage({
 
   return (
     <div className="mx-auto max-w-2xl py-4">
-      <p className="text-xs uppercase text-gold">{t.onboarding.eyebrow}</p>
-      <h1 className="mt-3 text-3xl font-bold">{t.onboarding.title}</h1>
+      <span className="inline-flex items-center gap-2 rounded-full border border-gold/30 bg-gold/10 px-3 py-1 text-xs font-medium text-gold">
+        <span className="size-1.5 rounded-full bg-gold" />
+        {t.onboarding.eyebrow}
+      </span>
+
+      <h1 className="mt-4 text-3xl font-bold">
+        {t.onboarding.title} <span aria-hidden>🌅</span>
+      </h1>
       <p className="mt-2 text-muted">{t.onboarding.subtitle}</p>
+
+      <p className="mt-4 rounded-xl border border-line bg-surface-2/40 px-4 py-3 text-sm text-muted">
+        {t.onboarding.why}
+      </p>
 
       <div className="mt-8">
         <LocationPicker
@@ -37,8 +47,11 @@ export default async function OnboardingPage({
           }}
           submitLabel={t.onboarding.submit}
           redirectTo={next && next.startsWith("/") && !next.startsWith("//") ? next : "/dashboard"}
+          numbered
         />
       </div>
+
+      <p className="mt-6 text-center text-xs text-dim">{t.onboarding.changeLater}</p>
     </div>
   );
 }

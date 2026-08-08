@@ -230,3 +230,12 @@ create policy fajr_logs_select on public.fajr_logs for select to authenticated
 -- No INSERT / UPDATE / DELETE policy exists for `authenticated`, on purpose.
 -- Check-ins are written only by the server, which verifies against real
 -- computed prayer times first. A user holding the anon key cannot forge a day.
+
+/* ------------------------------------------------------------------ */
+/* Schema cache                                                        */
+/* ------------------------------------------------------------------ */
+
+-- PostgREST answers from a cached copy of the schema, so a freshly added column
+-- can still come back as "Could not find the 'x' column ... in the schema cache"
+-- until it reloads. This makes the reload immediate rather than eventual.
+notify pgrst, 'reload schema';

@@ -29,9 +29,15 @@ type Props = {
   submitLabel: string;
   /** Where to send the user after a successful save. Omit to stay on the page. */
   redirectTo?: string;
+  /**
+   * Number the two cards and mark them required. Onboarding uses this so the
+   * page reads as a checklist you must finish; settings does not, because there
+   * the same fields are just editable values.
+   */
+  numbered?: boolean;
 };
 
-export function LocationPicker({ locale, initial, submitLabel, redirectTo }: Props) {
+export function LocationPicker({ locale, initial, submitLabel, redirectTo, numbered }: Props) {
   const t = getDict(locale);
   const [state, action] = useActionState<ActionResult | null, FormData>(saveProfile, null);
 
@@ -108,6 +114,13 @@ export function LocationPicker({ locale, initial, submitLabel, redirectTo }: Pro
 
   const popular = CITIES.slice(0, 6);
 
+  const step = (n: number) =>
+    numbered ? (
+      <span className="tabular flex size-6 shrink-0 items-center justify-center rounded-full bg-gold/15 text-xs font-bold text-gold">
+        {n}
+      </span>
+    ) : null;
+
   return (
     <form action={action} className="space-y-6">
       <input type="hidden" name="latitude" value={coords?.lat ?? ""} />
@@ -120,9 +133,17 @@ export function LocationPicker({ locale, initial, submitLabel, redirectTo }: Pro
 
       {/* Name ---------------------------------------------------------- */}
       <div className="card p-5">
-        <label htmlFor="display_name" className="block text-sm font-medium">
-          {t.picker.nameLabel}
-        </label>
+        <div className="flex items-center gap-2.5">
+          {step(1)}
+          <label htmlFor="display_name" className="text-sm font-medium">
+            {t.picker.nameLabel}
+          </label>
+          {numbered && (
+            <span className="rounded-full border border-line px-2 py-0.5 text-[10px] text-dim">
+              {t.picker.required}
+            </span>
+          )}
+        </div>
         <p className="mt-1 text-xs text-muted">{t.picker.nameHelp}</p>
         <input
           id="display_name"
@@ -136,7 +157,15 @@ export function LocationPicker({ locale, initial, submitLabel, redirectTo }: Pro
 
       {/* Location ------------------------------------------------------ */}
       <div className="card p-5">
-        <h2 className="text-sm font-medium">{t.picker.whereLabel}</h2>
+        <div className="flex items-center gap-2.5">
+          {step(2)}
+          <h2 className="text-sm font-medium">{t.picker.whereLabel}</h2>
+          {numbered && (
+            <span className="rounded-full border border-line px-2 py-0.5 text-[10px] text-dim">
+              {t.picker.required}
+            </span>
+          )}
+        </div>
         <p className="mt-1 text-xs text-muted">{t.picker.whereHelp}</p>
 
         <div className="mt-3 flex flex-col gap-2 sm:flex-row">

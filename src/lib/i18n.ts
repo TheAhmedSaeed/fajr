@@ -80,11 +80,13 @@ const ar = {
   },
 
   onboarding: {
-    eyebrow: "إعداد لمرة واحدة",
-    title: "حدِّد نافذة الفجر",
+    eyebrow: "إعداد مطلوب · لمرة واحدة",
+    title: "أهلًا بك في الفجر",
     subtitle:
-      "كل شيء يعتمد على هذا: لا يُفتح تسجيلك إلا بين الأذان والشروق في مدينتك أنت، في تاريخ اليوم.",
-    submit: "احفظ وتابع",
+      "قبل أن تسجّل أول فجر، نحتاج شيئين فقط: اسمًا تعرفك به مجموعتك، والمدينة التي تصلي فيها.",
+    why: "من المدينة نحسب وقت الأذان والشروق كل يوم — وهي النافذة الوحيدة التي يُقبل فيها التسجيل. لهذا لا يمكن تخطّي هذه الخطوة.",
+    changeLater: "لن نسألك عن هذا مرة أخرى. يمكنك تغييره متى شئت من الإعدادات.",
+    submit: "احفظ وابدأ",
   },
 
   picker: {
@@ -104,6 +106,7 @@ const ar = {
     previewSunrise: "الشروق",
     previewNote: "التسجيل مفتوح فقط بين هذين الوقتين.",
     methodInUse: (m: string) => `محسوبة بطريقة ${m}`,
+    required: "مطلوب",
     pickCityFirst: "اختر مدينة للمتابعة.",
     saving: "جارٍ الحفظ…",
   },
@@ -369,11 +372,13 @@ const en: Dict = {
   },
 
   onboarding: {
-    eyebrow: "One-time setup",
-    title: "Set your Fajr window",
+    eyebrow: "Required · one-time setup",
+    title: "Welcome to Fajr",
     subtitle:
-      "Everything else depends on this: your check-in only opens between the adhan and sunrise in your city, on today's date.",
-    submit: "Save and continue",
+      "Before you can log your first Fajr we need two things: a name your group will recognise, and the city you pray in.",
+    why: "Your city is what we compute the adhan and sunrise from each day — and that window is the only time a check-in is accepted. That is why this step cannot be skipped.",
+    changeLater: "We won't ask again. You can change any of it later in settings.",
+    submit: "Save and start",
   },
 
   picker: {
@@ -393,6 +398,7 @@ const en: Dict = {
     previewSunrise: "Sunrise",
     previewNote: "Check-in is open only between these two times.",
     methodInUse: (m: string) => `Calculated using ${m}`,
+    required: "Required",
     pickCityFirst: "Pick a city to continue.",
     saving: "Saving…",
   },

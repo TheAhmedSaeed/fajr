@@ -109,18 +109,27 @@ export async function saveProfile(
     return { ok: false, error: t.errors.badTimezone };
   }
 
-  const { error } = await supabase
+  const core = {
+    display_name: displayName,
+    city_label: cityLabel || null,
+    latitude,
+    longitude,
+    timezone,
+    calculation_method: method,
+  };
+
+  let { error } = await supabase
     .from("profiles")
-    .update({
-      display_name: displayName,
-      city_label: cityLabel || null,
-      city_id: cityId || null,
-      latitude,
-      longitude,
-      timezone,
-      calculation_method: method,
-    })
+    .update({ ...core, city_id: cityId || null })
     .eq("id", user.id);
+
+  // PGRST204 = the column is not in PostgREST's schema cache, i.e. this database
+  // predates a migration. `city_id` only controls whether a city name can be
+  // shown translated, so it must never be the reason someone cannot finish
+  // onboarding — save everything else and carry on.
+  if (error?.code === "PGRST204" && error.message.includes("city_id")) {
+    ({ error } = await supabase.from("profiles").update(core).eq("id", user.id));
+  }
 
   if (error) return { ok: false, error: error.message };
 
