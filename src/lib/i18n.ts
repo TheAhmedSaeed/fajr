@@ -76,7 +76,13 @@ const ar = {
     email: "البريد الإلكتروني",
     submit: "أرسل لي رابط الدخول",
     sending: "جارٍ الإرسال…",
-    hint: "الرابط ينتهي بعد وقت قصير. إن لم يصلك، تحقّق من مجلد الرسائل غير المرغوب فيها.",
+    sentTitle: "تحقّق من بريدك",
+    sentTo: (email: string) => `أرسلنا رابط الدخول إلى ${email}`,
+    sentStep: "افتح الرسالة واضغط الرابط — وستعود إلى هنا وقد سُجّل دخولك.",
+    sentJunk:
+      "لم تجدها؟ ابحث في مجلد الرسائل غير المرغوب فيها (Junk / Spam). غالبًا تكون هناك.",
+    sentPatience: "قد تتأخر الرسالة دقيقة. لا داعي لطلب رابط جديد.",
+    sentOther: "استخدم بريدًا آخر",
   },
 
   onboarding: {
@@ -285,6 +291,7 @@ const ar = {
 
   errors: {
     notSignedIn: "لست مسجّل الدخول.",
+    serverConfig: "تعذّر إتمام العملية بسبب خطأ في إعداد الخادم. أُبلغ صاحب الموقع بالتفاصيل.",
     invalidEmail: "أدخل بريدًا إلكترونيًا صحيحًا.",
     magicLinkSent: (email: string) => `تحقّق من ${email} للحصول على رابط الدخول.`,
     rateLimited: "أُرسلت رسائل كثيرة في وقت قصير. انتظر دقائق ثم أعد المحاولة.",
@@ -371,7 +378,12 @@ const en: Dict = {
     email: "Email",
     submit: "Email me a sign-in link",
     sending: "Sending…",
-    hint: "The link expires shortly. If it doesn't arrive, check your spam folder.",
+    sentTitle: "Check your email",
+    sentTo: (email: string) => `We sent a sign-in link to ${email}`,
+    sentStep: "Open the message and tap the link — you'll land back here, signed in.",
+    sentJunk: "Can't find it? Look in your Junk / Spam folder. That's usually where it is.",
+    sentPatience: "It can take a minute to arrive. There's no need to request another link.",
+    sentOther: "Use a different email",
   },
 
   onboarding: {
@@ -581,6 +593,7 @@ const en: Dict = {
 
   errors: {
     notSignedIn: "You are not signed in.",
+    serverConfig: "This could not be completed because of a server configuration problem. The details are in the server log.",
     invalidEmail: "Enter a valid email address.",
     magicLinkSent: (email: string) => `Check ${email} for your sign-in link.`,
     rateLimited: "Too many emails sent in a short time. Wait a few minutes and try again.",

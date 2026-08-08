@@ -9,7 +9,7 @@ import { getProfile, locationOf } from "@/lib/data";
 import { getT } from "@/lib/locale";
 import { getOrigin } from "@/lib/site-url";
 import { LOCALE_COOKIE } from "@/lib/locale";
-import { isLocale } from "@/lib/i18n";
+import { isLocale, type Dict } from "@/lib/i18n";
 import { addDays, isMethodId, localDate, todayView, windowFor } from "@/lib/prayer";
 import {
   GRACE_LOOKBACK_DAYS,
@@ -37,6 +37,37 @@ export async function setLocale(formData: FormData) {
   });
 
   revalidatePath("/", "layout");
+}
+
+
+/**
+ * Turns a failed service-role request into something a visitor can read.
+ *
+ * Bad credentials and missing grants are operator problems, not user problems:
+ * the visitor gets one clear sentence, and the real cause — which is where the
+ * fix actually is — goes to the server log.
+ */
+function adminFailure(
+  scope: string,
+  error: { message: string; code?: string; details?: string } | null,
+  t: Dict,
+): string {
+  console.error(`[${scope}] service-role request failed`, {
+    code: error?.code,
+    message: error?.message,
+    details: error?.details,
+  });
+
+  const text = error?.message?.toLowerCase() ?? "";
+  if (
+    text.includes("invalid api key") ||
+    text.includes("jwt") ||
+    text.includes("unauthorized") ||
+    text.includes("permission denied")
+  ) {
+    return t.errors.serverConfig;
+  }
+  return error?.message ?? t.errors.serverConfig;
 }
 
 /* ------------------------------------------------------------------ */
@@ -215,7 +246,7 @@ export async function checkIn(
   if (error) {
     // 23505 = unique_violation on (user_id, prayer_date).
     if (error.code === "23505") return { ok: false, error: t.errors.alreadyLogged };
-    return { ok: false, error: error.message };
+    return { ok: false, error: adminFailure("checkIn", error, t) };
   }
 
   revalidatePath("/", "layout");
@@ -273,7 +304,7 @@ export async function useGraceDay(
 
   if (error) {
     if (error.code === "23505") return { ok: false, error: t.errors.dayAccounted };
-    return { ok: false, error: error.message };
+    return { ok: false, error: adminFailure("useGraceDay", error, t) };
   }
 
   revalidatePath("/", "layout");
@@ -299,7 +330,7 @@ export async function createGroup(
   const admin = createAdminClient();
 
   const { data: codeData, error: codeError } = await admin.rpc("generate_invite_code");
-  if (codeError) return { ok: false, error: codeError.message };
+  if (codeError) return { ok: false, error: adminFailure("createGroup.rpc", codeError, t) };
 
   const { data: group, error } = await admin
     .from("groups")
@@ -313,7 +344,7 @@ export async function createGroup(
     .single();
 
   if (error || !group) {
-    return { ok: false, error: error?.message ?? t.errors.groupCreateFailed };
+    return { ok: false, error: error ? adminFailure("createGroup.insert", error, t) : t.errors.groupCreateFailed };
   }
 
   const { error: memberError } = await admin
@@ -323,7 +354,7 @@ export async function createGroup(
   if (memberError) {
     // Don't leave an orphan group nobody can see or delete.
     await admin.from("groups").delete().eq("id", group.id);
-    return { ok: false, error: memberError.message };
+    return { ok: false, error: adminFailure("createGroup.member", memberError, t) };
   }
 
   revalidatePath("/dashboard");
@@ -360,7 +391,7 @@ export async function joinGroup(
       { onConflict: "group_id,user_id", ignoreDuplicates: true },
     );
 
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: adminFailure("joinGroup", error, t) };
 
   revalidatePath("/dashboard");
   redirect(`/g/${group.id}`);
