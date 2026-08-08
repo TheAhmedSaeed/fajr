@@ -81,7 +81,7 @@ export default async function GroupPage({
   const leaderboard: LeaderboardRow[] = [];
 
   for (const m of members) {
-    const name = displayNameOf({ display_name: m.display_name });
+    const name = displayNameOf({ display_name: m.display_name }, t.group.anonymous);
     const mine = logsByUser.get(m.user_id) ?? [];
     const loc = locationOfMember(m);
 

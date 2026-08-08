@@ -53,8 +53,11 @@ export function locationOf(p: Profile): PrayerLocation | null {
   };
 }
 
-export function displayNameOf(p: { display_name: string | null; email?: string | null }): string {
-  return p.display_name?.trim() || p.email?.split("@")[0] || "Anonymous";
+export function displayNameOf(
+  p: { display_name: string | null; email?: string | null },
+  fallback = "Anonymous",
+): string {
+  return p.display_name?.trim() || p.email?.split("@")[0] || fallback;
 }
 
 export async function getUser() {
@@ -122,12 +125,44 @@ export async function getMembers(groupId: string): Promise<Member[]> {
   const ids = (rows ?? []).map((r) => r.user_id as string);
   if (ids.length === 0) return [];
 
-  const { data: profiles } = await supabase
-    .from("profiles")
-    .select("id, display_name, city_label, city_id, latitude, longitude, timezone, calculation_method")
-    .in("id", ids);
+  // Naming columns explicitly means one missing column fails the whole select,
+  // and a failure here is not obvious downstream: every field arrives null and
+  // the group page quietly renders each member as an anonymous, location-less
+  // row. `city_id` is optional cosmetics, so it is dropped and retried rather
+  // than allowed to take the names and coordinates down with it.
+  const COLUMNS = "id, display_name, city_label, latitude, longitude, timezone, calculation_method";
 
-  const byId = new Map((profiles ?? []).map((p) => [p.id as string, p]));
+  // The two selects return different row shapes, so widen to the union of both.
+  type ProfileRow = {
+    id: string;
+    display_name: string | null;
+    city_label: string | null;
+    city_id?: string | null;
+    latitude: number | null;
+    longitude: number | null;
+    timezone: string | null;
+    calculation_method: string | null;
+  };
+
+  const full = await supabase.from("profiles").select(`${COLUMNS}, city_id`).in("id", ids);
+  let profiles = full.data as ProfileRow[] | null;
+
+  if (full.error) {
+    console.error("[getMembers] profile select failed, retrying without city_id", {
+      code: full.error.code,
+      message: full.error.message,
+    });
+    const reduced = await supabase.from("profiles").select(COLUMNS).in("id", ids);
+    profiles = reduced.data as ProfileRow[] | null;
+    if (reduced.error) {
+      console.error("[getMembers] profile select failed", {
+        code: reduced.error.code,
+        message: reduced.error.message,
+      });
+    }
+  }
+
+  const byId = new Map((profiles ?? []).map((p) => [p.id, p]));
 
   return (rows ?? []).map((r) => {
     const p = byId.get(r.user_id as string);
@@ -135,13 +170,13 @@ export async function getMembers(groupId: string): Promise<Member[]> {
       user_id: r.user_id as string,
       role: r.role as string,
       joined_at: r.joined_at as string,
-      display_name: (p?.display_name as string | null) ?? null,
-      city_label: (p?.city_label as string | null) ?? null,
-      city_id: (p?.city_id as string | null) ?? null,
-      latitude: (p?.latitude as number | null) ?? null,
-      longitude: (p?.longitude as number | null) ?? null,
-      timezone: (p?.timezone as string | null) ?? null,
-      calculation_method: (p?.calculation_method as string) ?? DEFAULT_METHOD,
+      display_name: p?.display_name ?? null,
+      city_label: p?.city_label ?? null,
+      city_id: p?.city_id ?? null,
+      latitude: p?.latitude ?? null,
+      longitude: p?.longitude ?? null,
+      timezone: p?.timezone ?? null,
+      calculation_method: p?.calculation_method ?? DEFAULT_METHOD,
     };
   });
 }
