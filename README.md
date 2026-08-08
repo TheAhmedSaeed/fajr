@@ -73,8 +73,8 @@ Fill in from **Project Settings → API**:
 | Variable | Where it comes from |
 | --- | --- |
 | `NEXT_PUBLIC_SUPABASE_URL` | Project URL |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | `anon` / publishable key |
-| `SUPABASE_SERVICE_ROLE_KEY` | `service_role` key — **server-only, never expose it** |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | The **Publishable key** (`sb_publishable_…`), formerly `anon`. Safe in the browser. |
+| `SUPABASE_SERVICE_ROLE_KEY` | The **Secret key** (`sb_secret_…`), formerly `service_role` — **server-only, never expose it**. `SUPABASE_SECRET_KEY` works as an alias. |
 | `NEXT_PUBLIC_SITE_URL` | Optional override. Leave unset and the origin is taken from the request, which is correct on Railway/Vercel. Set it only to force a specific host — no trailing slash needed, it is stripped. |
 
 ### 4. Point Supabase auth at your app

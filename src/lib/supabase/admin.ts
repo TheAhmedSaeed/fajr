@@ -14,10 +14,15 @@ import { createClient } from "@supabase/supabase-js";
  * turns that mistake into a build error rather than a leaked key.
  */
 export function createAdminClient() {
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+  // Supabase renamed `service_role` to "secret key", so accept either name
+  // rather than making people guess which era of the docs this project follows.
+  const key = (
+    process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.SUPABASE_SECRET_KEY
+  )?.trim();
+
   if (!key) {
     throw new Error(
-      "SUPABASE_SERVICE_ROLE_KEY is not set. Check-ins and group joins cannot be written without it.",
+      "No service-role key found. Set SUPABASE_SERVICE_ROLE_KEY (or SUPABASE_SECRET_KEY) to the secret key from Supabase → Project Settings → API Keys. Check-ins and group joins cannot be written without it.",
     );
   }
 
@@ -27,7 +32,7 @@ export function createAdminClient() {
   // action happened to run first.
   if (key.startsWith("sb_publishable_") || key === process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
     throw new Error(
-      "SUPABASE_SERVICE_ROLE_KEY holds the publishable/anon key. It needs the secret (service_role) key — the one that is never sent to a browser.",
+      "The service-role variable holds the publishable/anon key. It needs the secret (service_role) key — the one that is never sent to a browser.",
     );
   }
 
