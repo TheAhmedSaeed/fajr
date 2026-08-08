@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getProfile, locationOf } from "@/lib/data";
 import { getT } from "@/lib/locale";
+import { getOrigin } from "@/lib/site-url";
 import { LOCALE_COOKIE } from "@/lib/locale";
 import { isLocale } from "@/lib/i18n";
 import { addDays, isMethodId, localDate, todayView, windowFor } from "@/lib/prayer";
@@ -50,7 +51,7 @@ export async function signIn(_prev: ActionResult | null, formData: FormData): Pr
   }
 
   const supabase = await createClient();
-  const origin = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+  const origin = await getOrigin();
   const next = String(formData.get("next") ?? "/dashboard");
 
   const { error } = await supabase.auth.signInWithOtp({

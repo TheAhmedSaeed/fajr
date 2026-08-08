@@ -75,7 +75,7 @@ Fill in from **Project Settings → API**:
 | `NEXT_PUBLIC_SUPABASE_URL` | Project URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | `anon` / publishable key |
 | `SUPABASE_SERVICE_ROLE_KEY` | `service_role` key — **server-only, never expose it** |
-| `NEXT_PUBLIC_SITE_URL` | `http://localhost:3000` locally; your real origin in production |
+| `NEXT_PUBLIC_SITE_URL` | Optional override. Leave unset and the origin is taken from the request, which is correct on Railway/Vercel. Set it only to force a specific host — no trailing slash needed, it is stripped. |
 
 ### 4. Point Supabase auth at your app
 
@@ -87,11 +87,15 @@ Fill in from **Project Settings → API**:
 Use the `/**` wildcard rather than the bare `/auth/callback` path. The sign-in link carries a
 `?next=` query string, and an exact-path entry does not always match it.
 
-**If you skip this, sign-in silently half-breaks rather than erroring:** Supabase quietly
-discards the redirect it was asked for and falls back to the Site URL, so the emailed link
-comes back as `...&redirect_to=http://localhost:3000` with no `/auth/callback` in it. The app
-now catches that case and forwards the code on itself, so sign-in still completes — but fix
-the allow-list anyway rather than relying on the fallback.
+Add a `/**` entry for **every** origin you sign in from, including `http://localhost:3000/**`
+if you also develop locally. Supabase does not error on an unlisted redirect — it quietly
+discards it and substitutes the Site URL, so the failure looks like a link pointing at the
+wrong host rather than a rejection.
+
+The host in the emailed link comes from **the app that sent it**, not from Supabase's Site
+URL. Signing in from `localhost` produces a localhost link, which is correct; signing in from
+production produces a production link. If a deployed site emails localhost links, the origin
+is being misread — see `src/lib/site-url.ts`.
 
 ### 5. Run it
 
@@ -106,11 +110,14 @@ Set the same four environment variables in your host's project settings, with
 `NEXT_PUBLIC_SITE_URL` as your production origin, and add that origin to the Supabase
 redirect list.
 
-**Railway:** generate a domain first (Settings → Networking → Generate Domain), then set
-`NEXT_PUBLIC_SITE_URL` to it — including `https://`, with no trailing slash — and redeploy.
-The redeploy is not optional: Next.js bakes `NEXT_PUBLIC_*` values into the build, so a
-variable added after the first deploy is not picked up until the app is rebuilt. `npm run
-build` / `npm run start` are already wired up, and `next start` honours Railway's `PORT`.
+**Railway:** generate a domain (Settings → Networking → Generate Domain) and deploy. You do
+not need to set `NEXT_PUBLIC_SITE_URL` — the origin is read from the `x-forwarded-host` and
+`x-forwarded-proto` headers Railway sets, so links point at your real domain automatically.
+`npm run build` / `npm run start` are already wired up, and `next start` honours `PORT`.
+
+If you *do* set `NEXT_PUBLIC_SITE_URL`, redeploy after changing it: Next.js inlines
+`NEXT_PUBLIC_*` at build time, so a value edited after the first deploy has no effect until
+the app is rebuilt.
 
 **Vercel:** works as-is with the same four variables.
 

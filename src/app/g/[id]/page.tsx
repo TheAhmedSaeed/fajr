@@ -10,6 +10,7 @@ import {
   type Member,
 } from "@/lib/data";
 import { getT } from "@/lib/locale";
+import { getOrigin } from "@/lib/site-url";
 import { displayCity } from "@/lib/cities";
 import { formatTime, isMethodId, isValidWindow, localDate, todayView, type MadhabId } from "@/lib/prayer";
 import {
@@ -131,7 +132,7 @@ export default async function GroupPage({
   }, null);
   const groupStats = computeGroupStats(logs, memberIds, viewerToday, earliestJoin);
 
-  const origin = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+  const origin = await getOrigin();
   const isOwner = group.owner_id === profile.id;
   const inToday = board.filter((b) => b.logged).length;
 
