@@ -4,12 +4,20 @@
     "lib": ["ES2022", "dom"],
     "module": "esnext",
     "moduleResolution": "bundler",
+    "resolveJsonModule": true,
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "noEmit": false,
     "outDir": ".test-build",
-    "rootDir": "src"
+    "rootDir": "."
   },
-  "include": ["src/lib/prayer.ts", "src/lib/scoring.ts", "src/lib/cities.ts"]
+  "include": [
+    "src/lib/prayer.ts",
+    "src/lib/scoring.ts",
+    "src/lib/cities.ts",
+    "src/lib/i18n.ts",
+    "locales/ar.json",
+    "locales/en.json"
+  ]
 }

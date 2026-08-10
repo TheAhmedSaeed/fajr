@@ -28,7 +28,14 @@ for await (const file of walk(OUT)) {
     (match, prefix, open, spec, close) =>
       /\.[a-zA-Z0-9]+$/.test(spec) ? match : `${prefix}${open}${spec}.js${close}`,
   );
-  if (fixed !== src) await writeFile(file, fixed);
+  // Node's ESM loader requires an explicit attribute for JSON; bundlers do not,
+  // so TypeScript emits the import without one.
+  const withJsonAttrs = fixed.replace(
+    /(\bfrom\s+)(["'])([^"']+\.json)\2(?!\s*with)/g,
+    (_m, prefix, quote, spec) => `${prefix}${quote}${spec}${quote} with { type: "json" }`,
+  );
+
+  if (withJsonAttrs !== src) await writeFile(file, withJsonAttrs);
 }
 
 await writeFile(join(OUT, "package.json"), JSON.stringify({ type: "module" }) + "\n");

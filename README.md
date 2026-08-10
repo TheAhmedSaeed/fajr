@@ -240,6 +240,25 @@ case deserves a dedicated rule if anyone actually uses it from Tromsø.
 
 ---
 
+## Translations
+
+Every string the app displays lives in [`locales/ar.json`](locales/ar.json) and
+[`locales/en.json`](locales/en.json). Nothing user-facing is hard-coded in a component, so
+translating is editing two files — no TypeScript involved.
+
+- `{braces}` are filled at runtime. Keep every placeholder a string contains; you may move it
+  within the sentence, which matters when the natural word order differs.
+- `units` holds counted nouns. Arabic changes the noun at one, two, three-to-ten and
+  eleven-plus, so a number is never simply concatenated to a plural. The keys are the standard
+  CLDR categories (`zero`/`one`/`two`/`few`/`many`/`other`) and `Intl.PluralRules` picks
+  between them. Write `{n}` where the numeral should appear, and leave it out where the word
+  already carries it — `يومان` needs no digit.
+
+After editing, run `npm test`. It checks that both files declare the same keys, that matching
+strings use the same placeholders, that nothing was left blank, that every counted noun covers
+the categories its language actually uses, and that no placeholder survives into rendered
+output. A dropped `{email}`, a deleted key or an emptied value each fail with the exact path.
+
 ## Project layout
 
 ```
@@ -256,6 +275,7 @@ src/
     g/[id]/          Group page: dawn board, leaderboard, invites
     join/[code]/     Public invite landing page
     onboarding/      One-time location + method setup
+locales/             ar.json / en.json — all display text, editable without code
 supabase/schema.sql  Tables, RLS policies, triggers, invite-code generator
 tests/               Unit tests for the prayer and scoring cores
 ```

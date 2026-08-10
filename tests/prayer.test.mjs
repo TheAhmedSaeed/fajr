@@ -10,8 +10,8 @@ import {
   tierAt,
   todayView,
   formatTime,
-} from "../.test-build/lib/prayer.js";
-import { CITIES } from "../.test-build/lib/cities.js";
+} from "../.test-build/src/lib/prayer.js";
+import { CITIES } from "../.test-build/src/lib/cities.js";
 
 const riyadh = {
   latitude: 24.7136,

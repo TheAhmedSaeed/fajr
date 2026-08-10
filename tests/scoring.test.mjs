@@ -14,7 +14,7 @@ import {
   computeGroupStats,
   badgesFor,
   GRACE_PER_MONTH,
-} from "../.test-build/lib/scoring.js";
+} from "../.test-build/src/lib/scoring.js";
 
 const prayed = (date, tier = "middle", jamaah = false, user = "u1") => ({
   user_id: user,
