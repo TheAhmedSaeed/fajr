@@ -26,6 +26,20 @@ praying right after the adhan. So the window is split into equal thirds:
 
 Praying in congregation adds **+2** on top (self-reported).
 
+**A 30-minute grace period after sunrise.** Oversleeping used to mean the day was
+simply lost. A check-in is now still accepted for 30 minutes past sunrise, recorded as
+`overdue` and worth **zero points**. The streak survives and the group board shows a
+distinct amber mark, so the record stays honest in both directions: the prayer happened,
+and it happened late. Congregation cannot be claimed on it — that congregation prayed
+hours earlier.
+
+**Owners can log for a member who couldn't.** A flat battery at 4am shouldn't cost
+someone their streak. The group owner enters *when the member prayed*, not what it was
+worth; the tier is then derived from that member's own window for that date, so the
+scoring rule is identical to pressing the button at the time. Every such row stores
+`logged_by` and is labelled on the board, because an entry someone else made about you
+should never look like one you made yourself. Bounded to the last 7 days.
+
 **Streaks, with a floor.** The failure mode of a pure streak is a cliff — miss day 47 and
 the whole thing collapses, so people quit instead of restarting. Each person gets **2 grace
 days a month**. A grace day protects the streak and nothing else: it scores zero points,
@@ -167,6 +181,8 @@ The one thing that would make this pointless is a user writing their own check-i
   level, not just in application code.
 - A `CHECK` constraint enforces that a real check-in carries a tier and a grace day carries
   none, scores zero, and can't claim congregation.
+- Logging on behalf of a member re-reads the group's `owner_id` from the database. The
+  form's claim about who you are is ignored, exactly as any other request body would be.
 
 What this *doesn't* do is prove anyone prayed — nothing could, and that part stays between
 a person and Allah. What it does prove is that they were awake and present during the
@@ -208,6 +224,8 @@ so nothing is lost:
 - `profiles.city_id` remembers *which* bundled city was picked, so its name renders in the
   reader's own language rather than the one chosen by whoever set it.
 - `profiles.calculation_method` now defaults to `UmmAlQura`.
+- `fajr_logs.tier` accepts `overdue`, and `fajr_logs.logged_by` records the owner who
+  entered a row on someone's behalf.
 - `profiles.madhab` is made nullable and is no longer read. The column is left in place
   rather than dropped, since dropping it would be destructive; you can remove it by hand if
   you want the table tidy.

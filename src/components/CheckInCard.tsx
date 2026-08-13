@@ -6,6 +6,7 @@ import { Notice, SubmitButton } from "./ui";
 import type { Tier } from "@/lib/prayer";
 import { getDict, type Dict, type Locale } from "@/lib/i18n";
 import { TIER_POINTS } from "@/lib/scoring";
+import { OVERDUE_GRACE_MINUTES } from "@/lib/prayer";
 
 type Logged = { tier: Tier | null; points: number; inCongregation: boolean; kind: "prayed" | "grace" };
 
@@ -29,6 +30,7 @@ const TONES: Record<Tier, string> = {
   early: "text-gold",
   middle: "text-rose",
   late: "text-muted",
+  overdue: "text-violet",
 };
 
 function duration(ms: number): string {
@@ -58,7 +60,9 @@ export function CheckInCard(props: CheckInCardProps) {
 
   const [checkInState, checkInAction] = useActionState<ActionResult | null, FormData>(checkIn, null);
 
-  const state = now < fajr ? "before" : now < sunrise ? "open" : "closed";
+  const overdueUntil = sunrise + OVERDUE_GRACE_MINUTES * 60_000;
+  const state =
+    now < fajr ? "before" : now < sunrise ? "open" : now < overdueUntil ? "overdue" : "closed";
   const progress = state === "open" ? (now - fajr) / (sunrise - fajr) : 0;
   const liveTier: Tier = progress < 1 / 3 ? "early" : progress < 2 / 3 ? "middle" : "late";
 
@@ -98,6 +102,14 @@ export function CheckInCard(props: CheckInCardProps) {
             msLeft={sunrise - now}
             progress={progress}
             tier={liveTier}
+            action={checkInAction}
+            result={checkInState}
+          />
+        ) : state === "overdue" ? (
+          <OverdueState
+            t={t}
+            msLeft={overdueUntil - now}
+            sunriseLabel={props.sunriseLabel}
             action={checkInAction}
             result={checkInState}
           />
@@ -267,6 +279,51 @@ function ThirdsBar({ t, progress, isRtl }: { t: Dict; progress: number; isRtl: b
         <span className="text-rose">{t.checkIn.ptsShort(TIER_POINTS.middle)}</span>
         <span>{t.checkIn.ptsShort(TIER_POINTS.late)}</span>
       </div>
+    </div>
+  );
+}
+
+/**
+ * The window has closed but the grace period has not. Deliberately styled apart
+ * from the open state — muted rather than gold, no pulse, and the zero score
+ * stated up front, so it never reads as an equivalent way to check in.
+ */
+function OverdueState({
+  t,
+  msLeft,
+  sunriseLabel,
+  action,
+  result,
+}: {
+  t: Dict;
+  msLeft: number;
+  sunriseLabel: string;
+  action: (payload: FormData) => void;
+  result: ActionResult | null;
+}) {
+  return (
+    <div>
+      <div className="text-center">
+        <div className="mx-auto flex size-14 items-center justify-center rounded-full bg-violet/10 text-2xl">
+          🌤️
+        </div>
+        <p className="mt-3 text-lg font-semibold">{t.checkIn.overdueHeading}</p>
+        <p className="mt-1 text-sm text-muted">{t.checkIn.overdueBody(sunriseLabel)}</p>
+
+        <p className="mt-4 text-xs uppercase text-dim">{t.checkIn.overdueLabel}</p>
+        <p className="tabular mt-1 text-3xl font-bold text-violet sm:text-4xl">{duration(msLeft)}</p>
+      </div>
+
+      <form action={action} className="mt-6 space-y-3">
+        <button
+          type="submit"
+          className="w-full rounded-xl border border-violet/40 bg-violet/10 px-4 py-3.5 text-sm font-semibold text-ink transition hover:bg-violet/20"
+        >
+          {t.checkIn.overdueSubmit}
+        </button>
+        <p className="text-center text-xs text-dim">{t.checkIn.overdueNote}</p>
+        <Notice result={result} />
+      </form>
     </div>
   );
 }

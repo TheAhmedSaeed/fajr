@@ -61,8 +61,22 @@ export type PrayerLocation = {
   method: MethodId;
 };
 
-/** Where in the Fajr window a check-in landed. */
-export type Tier = "early" | "middle" | "late";
+/**
+ * Where in the Fajr window a check-in landed.
+ *
+ * `overdue` is outside the legal window — the prayer happened, but after the
+ * sun was up. It exists so that oversleeping by a few minutes is recorded
+ * honestly rather than silently lost, and it scores nothing.
+ */
+export type Tier = "early" | "middle" | "late" | "overdue";
+
+/**
+ * How long after sunrise a check-in is still accepted, marked as late.
+ * Praying Fajr after sunrise is not praying it in its time; this window only
+ * acknowledges that the alternative — no record at all — is worse.
+ */
+export const OVERDUE_GRACE_MINUTES = 30;
+const OVERDUE_GRACE_MS = OVERDUE_GRACE_MINUTES * 60_000;
 
 export type Window = {
   /** Calendar date in the user's timezone, `YYYY-MM-DD`. */
@@ -153,14 +167,54 @@ export function tierAt(w: Window, at: Date): Tier | null {
   const start = w.fajr.getTime();
   const end = w.sunrise.getTime();
   const t = at.getTime();
-  if (t < start || t >= end) return null;
-  const progress = (t - start) / (end - start);
+
+  if (t < start) return null;
+  if (t >= end) return t < end + OVERDUE_GRACE_MS ? "overdue" : null;
+
+  return tierForProgress((t - start) / (end - start));
+}
+
+function tierForProgress(progress: number): Tier {
   if (progress < 1 / 3) return "early";
   if (progress < 2 / 3) return "middle";
   return "late";
 }
 
-export type WindowState = "before" | "open" | "closed";
+/** Minutes since local midnight for an `HH:MM` string, or null if malformed. */
+export function minutesOfDay(time: string): number | null {
+  const match = /^(\d{1,2}):(\d{2})$/.exec(time.trim());
+  if (!match) return null;
+  const hours = Number(match[1]);
+  const minutes = Number(match[2]);
+  if (hours > 23 || minutes > 59) return null;
+  return hours * 60 + minutes;
+}
+
+/**
+ * The tier for a wall-clock time someone reports, e.g. an owner entering
+ * "04:35" for a member whose phone was dead.
+ *
+ * Compared as minutes-since-midnight rather than by reconstructing an instant:
+ * Fajr and sunrise always fall on the same local date as the window (asserted
+ * across every bundled city in the tests), so no timezone arithmetic is needed
+ * and no DST transition can shift the answer.
+ */
+export function tierAtLocalTime(w: Window, timezone: string, time: string): Tier | null {
+  const entered = minutesOfDay(time);
+  if (entered === null) return null;
+
+  const fajr = minutesOfDay(formatTime(w.fajr, timezone));
+  const sunrise = minutesOfDay(formatTime(w.sunrise, timezone));
+  if (fajr === null || sunrise === null || sunrise <= fajr) return null;
+
+  if (entered < fajr) return null;
+  if (entered >= sunrise) {
+    return entered < sunrise + OVERDUE_GRACE_MINUTES ? "overdue" : null;
+  }
+  return tierForProgress((entered - fajr) / (sunrise - fajr));
+}
+
+export type WindowState = "before" | "open" | "overdue" | "closed";
 
 export type TodayView = {
   /** The user's current calendar date, in their timezone. */
@@ -168,7 +222,7 @@ export type TodayView = {
   /** Today's Fajr window. */
   window: Window;
   state: WindowState;
-  /** Tier you would earn by logging right now; null unless `state === "open"`. */
+  /** Tier you would earn by logging right now; null when outside the window entirely. */
   tier: Tier | null;
   /** Tomorrow's window — used for the countdown once today's has closed. */
   next: Window;
@@ -186,6 +240,7 @@ export function todayView(loc: PrayerLocation, now: Date = new Date()): TodayVie
   let state: WindowState;
   if (now.getTime() < window.fajr.getTime()) state = "before";
   else if (now.getTime() < window.sunrise.getTime()) state = "open";
+  else if (now.getTime() < window.sunrise.getTime() + OVERDUE_GRACE_MS) state = "overdue";
   else state = "closed";
 
   return { today, window, state, tier: tierAt(window, now), next };

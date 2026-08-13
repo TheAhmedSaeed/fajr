@@ -82,6 +82,7 @@ function build(locale: Locale) {
       loggedStreak: (n: number) => fill(raw.checkIn.loggedStreak, { days: unit("days", n) }),
       loggedClosed: (sunrise: string) => fill(raw.checkIn.loggedClosed, { sunrise }),
       closedBody: (sunrise: string) => fill(raw.checkIn.closedBody, { sunrise }),
+      overdueBody: (sunrise: string) => fill(raw.checkIn.overdueBody, { sunrise }),
       nextAt: (time: string) => fill(raw.checkIn.nextAt, { time }),
       ptsShort: (n: number) => fill(raw.checkIn.ptsShort, { points: unit("points", n) }),
     },
@@ -110,6 +111,12 @@ function build(locale: Locale) {
 
     groupForms: raw.groupForms,
 
+    adminLog: {
+      ...raw.adminLog,
+      windowWas: (fajr: string, sunrise: string) =>
+        fill(raw.adminLog.windowWas, { fajr, sunrise }),
+    },
+
     group: {
       ...raw.group,
       perfectBanner: (n: number) => fill(raw.group.perfectBanner, { days: unit("days", n) }),
@@ -132,6 +139,10 @@ function build(locale: Locale) {
       ...raw.errors,
       magicLinkSent: (email: string) => fill(raw.errors.magicLinkSent, { email }),
       logged: (n: number) => fill(raw.errors.logged, { points: unit("points", n) }),
+      adminDateRange: (n: number) => fill(raw.errors.adminDateRange, { n }),
+      adminOutsideWindow: (fajr: string, sunrise: string) =>
+        fill(raw.errors.adminOutsideWindow, { fajr, sunrise }),
+      adminLogged: (name: string) => fill(raw.errors.adminLogged, { name }),
     },
   };
 }

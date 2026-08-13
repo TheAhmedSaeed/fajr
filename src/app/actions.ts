@@ -5,13 +5,24 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getProfile, locationOf } from "@/lib/data";
+import { displayNameOf, getMembers, getProfile, locationOf, locationOfMember } from "@/lib/data";
 import { getT } from "@/lib/locale";
 import { getOrigin } from "@/lib/site-url";
 import { LOCALE_COOKIE } from "@/lib/locale";
 import { isLocale, type Dict } from "@/lib/i18n";
-import { addDays, isMethodId, localDate, todayView, windowFor } from "@/lib/prayer";
 import {
+  addDays,
+  daysBetween,
+  formatTime,
+  isMethodId,
+  isValidWindow,
+  localDate,
+  tierAtLocalTime,
+  todayView,
+  windowFor,
+} from "@/lib/prayer";
+import {
+  ADMIN_LOG_LOOKBACK_DAYS,
   GRACE_LOOKBACK_DAYS,
   GRACE_PER_MONTH,
   graceUsedThisMonth,
@@ -229,6 +240,9 @@ export async function checkIn(
     return { ok: false, error: t.errors.afterSunrise };
   }
 
+  // `overdue` means the sun is already up: the prayer is recorded so the streak
+  // and the group board stay truthful, but it earns nothing, and the
+  // congregation bonus cannot apply to a congregation that prayed hours ago.
   const points = pointsFor(view.tier, inCongregation);
   const admin = createAdminClient();
 
@@ -237,7 +251,7 @@ export async function checkIn(
     prayer_date: view.today,
     kind: "prayed",
     tier: view.tier,
-    in_congregation: inCongregation,
+    in_congregation: view.tier === "overdue" ? false : inCongregation,
     points,
     fajr_at: view.window.fajr.toISOString(),
     sunrise_at: view.window.sunrise.toISOString(),
@@ -309,6 +323,112 @@ export async function useGraceDay(
 
   revalidatePath("/", "layout");
   return { ok: true, message: t.errors.graceApplied };
+}
+
+
+/* ------------------------------------------------------------------ */
+/* Logging on behalf of a member                                       */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Lets a group owner record a prayer a member could not log themselves —
+ * a flat battery, no signal at 4am.
+ *
+ * The owner supplies *when the member prayed*, not what it was worth. The tier
+ * is then derived from that member's own window for that date, exactly as it
+ * would have been had they pressed the button at the time. So the rule is
+ * unchanged; only who typed it differs. Every such row records `logged_by`, and
+ * the group board shows it, because an entry someone else made about you should
+ * never be indistinguishable from one you made yourself.
+ */
+export async function logForMember(
+  _prev: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  const { t } = await getT();
+  const actor = await getProfile();
+  if (!actor) return { ok: false, error: t.errors.notSignedIn };
+
+  const groupId = String(formData.get("group_id") ?? "");
+  const memberId = String(formData.get("user_id") ?? "");
+  const date = String(formData.get("prayer_date") ?? "").trim();
+  const time = String(formData.get("prayer_time") ?? "").trim();
+  const inCongregation = formData.get("in_congregation") === "on";
+
+  if (!groupId || !memberId) return { ok: false, error: t.errors.missingGroup };
+
+  const supabase = await createClient();
+
+  // Ownership is checked against the database, never against anything the form
+  // claims — the form is just as forgeable as any other request body.
+  const { data: group } = await supabase
+    .from("groups")
+    .select("owner_id")
+    .eq("id", groupId)
+    .maybeSingle();
+
+  if (!group || group.owner_id !== actor.id) {
+    return { ok: false, error: t.errors.adminNotOwner };
+  }
+
+  const members = await getMembers(groupId);
+  const member = members.find((m) => m.user_id === memberId);
+  if (!member) return { ok: false, error: t.errors.adminNotMember };
+
+  const location = locationOfMember(member);
+  if (!location) return { ok: false, error: t.errors.adminNoLocation };
+
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return { ok: false, error: t.errors.adminBadDate };
+
+  // Bounded to recent history in the member's own calendar, so an owner cannot
+  // quietly backfill months of streak.
+  const memberToday = localDate(new Date(), location.timezone);
+  const age = daysBetween(date, memberToday);
+  if (age < 0 || age > ADMIN_LOG_LOOKBACK_DAYS) {
+    return { ok: false, error: t.errors.adminDateRange(ADMIN_LOG_LOOKBACK_DAYS) };
+  }
+
+  const window = windowFor(location, date);
+  if (!isValidWindow(window)) return { ok: false, error: t.errors.adminNoLocation };
+
+  const fajrLabel = formatTime(window.fajr, location.timezone);
+  const sunriseLabel = formatTime(window.sunrise, location.timezone);
+
+  const tier = tierAtLocalTime(window, location.timezone, time);
+  if (!tier) {
+    return {
+      ok: false,
+      error: /^\d{1,2}:\d{2}$/.test(time)
+        ? t.errors.adminOutsideWindow(fajrLabel, sunriseLabel)
+        : t.errors.adminBadTime,
+    };
+  }
+
+  const congregation = tier === "overdue" ? false : inCongregation;
+  const admin = createAdminClient();
+
+  const { error } = await admin.from("fajr_logs").insert({
+    user_id: memberId,
+    prayer_date: date,
+    kind: "prayed",
+    tier,
+    in_congregation: congregation,
+    points: pointsFor(tier, congregation),
+    fajr_at: window.fajr.toISOString(),
+    sunrise_at: window.sunrise.toISOString(),
+    logged_by: actor.id,
+  });
+
+  if (error) {
+    if (error.code === "23505") return { ok: false, error: t.errors.alreadyLogged };
+    return { ok: false, error: adminFailure("logForMember", error, t) };
+  }
+
+  revalidatePath("/", "layout");
+  return {
+    ok: true,
+    message: t.errors.adminLogged(displayNameOf({ display_name: member.display_name })),
+  };
 }
 
 /* ------------------------------------------------------------------ */

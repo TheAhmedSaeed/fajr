@@ -5,8 +5,14 @@ export type BoardEntry = {
   userId: string;
   name: string;
   /** Where this member's own Fajr window currently is. */
-  state: "before" | "open" | "closed" | "unknown";
-  logged: { kind: "prayed" | "grace"; tier: Tier | null; inCongregation: boolean } | null;
+  state: "before" | "open" | "overdue" | "closed" | "unknown";
+  logged: {
+    kind: "prayed" | "grace";
+    tier: Tier | null;
+    inCongregation: boolean;
+    /** True when a group owner entered this row rather than the member. */
+    byOwner: boolean;
+  } | null;
   fajrLabel: string;
   cityLabel: string | null;
   streak: number;
@@ -64,17 +70,15 @@ export function DawnBoard({ entries, t }: { entries: BoardEntry[]; t: Dict }) {
 
 function Lamp({ entry }: { entry: BoardEntry }) {
   if (entry.logged) {
-    const lit = entry.logged.kind === "prayed";
-    return (
-      <span
-        aria-hidden
-        className={`flex size-9 shrink-0 items-center justify-center rounded-full text-base ${
-          lit ? "bg-teal/15" : "bg-violet/15"
-        }`}
-      >
-        {lit ? "🌅" : "🛡️"}
-      </span>
-    );
+    if (entry.logged.kind === "grace") {
+      return <Badge className="bg-violet/15">🛡️</Badge>;
+    }
+    // A late prayer gets its own mark, so "in" and "in on time" stay distinct
+    // at a glance — which is the entire point of the board.
+    if (entry.logged.tier === "overdue") {
+      return <Badge className="bg-violet/10">🌤️</Badge>;
+    }
+    return <Badge className="bg-teal/15">🌅</Badge>;
   }
 
   const tone =
@@ -85,7 +89,18 @@ function Lamp({ entry }: { entry: BoardEntry }) {
       aria-hidden
       className={`flex size-9 shrink-0 items-center justify-center rounded-full text-base ${tone}`}
     >
-      {entry.state === "open" ? "⏳" : entry.state === "closed" ? "🌙" : "🌑"}
+      {entry.state === "open" ? "⏳" : entry.state === "overdue" ? "🌤️" : entry.state === "closed" ? "🌙" : "🌑"}
+    </span>
+  );
+}
+
+function Badge({ children, className }: { children: string; className: string }) {
+  return (
+    <span
+      aria-hidden
+      className={`flex size-9 shrink-0 items-center justify-center rounded-full text-base ${className}`}
+    >
+      {children}
     </span>
   );
 }
@@ -95,15 +110,20 @@ function StatusText({ entry, t }: { entry: BoardEntry; t: Dict }) {
     if (entry.logged.kind === "grace") {
       return <p className="text-xs font-medium text-violet">{t.group.stateGrace}</p>;
     }
+    const late = entry.logged.tier === "overdue";
     return (
-      <p className="text-xs font-medium text-teal">
-        {entry.logged.tier ? t.tiers[entry.logged.tier].name : t.group.stateLogged}
-        {entry.logged.inCongregation && " 🕌"}
-      </p>
+      <>
+        <p className={`text-xs font-medium ${late ? "text-violet" : "text-teal"}`}>
+          {entry.logged.tier ? t.tiers[entry.logged.tier].name : t.group.stateLogged}
+          {entry.logged.inCongregation && " 🕌"}
+        </p>
+        {entry.logged.byOwner && <p className="text-[10px] text-dim">{t.group.loggedByOwner}</p>}
+      </>
     );
   }
 
   if (entry.state === "open") return <p className="text-xs font-medium text-gold">{t.group.stateOpen}</p>;
+  if (entry.state === "overdue") return <p className="text-xs text-violet">{t.group.stateOverdue}</p>;
   if (entry.state === "before") return <p className="text-xs text-dim">{t.group.stateBefore}</p>;
   if (entry.state === "closed") return <p className="text-xs text-rose">{t.group.stateMissed}</p>;
   return <p className="text-xs text-dim">{t.group.stateUnknown}</p>;

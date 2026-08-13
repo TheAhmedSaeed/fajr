@@ -63,7 +63,7 @@ create table if not exists public.fajr_logs (
   user_id         uuid not null references public.profiles (id) on delete cascade,
   prayer_date     date not null,
   kind            text not null default 'prayed' check (kind in ('prayed', 'grace')),
-  tier            text check (tier in ('early', 'middle', 'late')),
+  tier            text check (tier in ('early', 'middle', 'late', 'overdue')),
   in_congregation boolean not null default false,
   points          integer not null default 0,
   -- Kept for auditing: what the server believed the window was at check-in time.
@@ -79,6 +79,16 @@ create table if not exists public.fajr_logs (
 );
 
 create index if not exists fajr_logs_user_date_idx on public.fajr_logs (user_id, prayer_date desc);
+
+-- Added after the first release. `overdue` records a prayer offered after
+-- sunrise: outside its time, worth nothing, but better recorded than lost.
+alter table public.fajr_logs drop constraint if exists fajr_logs_tier_check;
+alter table public.fajr_logs add constraint fajr_logs_tier_check
+  check (tier in ('early', 'middle', 'late', 'overdue'));
+
+-- Set when a group owner entered the row on someone else's behalf, so the
+-- group can always see who recorded what. Null means the member logged it.
+alter table public.fajr_logs add column if not exists logged_by uuid references public.profiles (id);
 
 /* ------------------------------------------------------------------ */
 /* New-user trigger                                                    */

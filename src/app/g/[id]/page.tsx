@@ -7,12 +7,12 @@ import {
   getMembers,
   getProfile,
   isOnboarded,
-  type Member,
+  locationOfMember,
 } from "@/lib/data";
 import { getT } from "@/lib/locale";
 import { getOrigin } from "@/lib/site-url";
 import { displayCity } from "@/lib/cities";
-import { DEFAULT_METHOD, formatTime, isMethodId, isValidWindow, localDate, todayView } from "@/lib/prayer";
+import { formatTime, isValidWindow, localDate, todayView } from "@/lib/prayer";
 import {
   computeGroupStats,
   computeStats,
@@ -26,18 +26,9 @@ import { DawnBoard, type BoardEntry } from "@/components/DawnBoard";
 import { Leaderboard } from "@/components/Leaderboard";
 import { InviteBox } from "@/components/InviteBox";
 import { GroupAdmin } from "@/components/GroupAdmin";
+import { AdminLogCard } from "@/components/AdminLogCard";
 
 export const dynamic = "force-dynamic";
-
-function locationOfMember(m: Member) {
-  if (m.latitude === null || m.longitude === null || !m.timezone) return null;
-  return {
-    latitude: m.latitude,
-    longitude: m.longitude,
-    timezone: m.timezone,
-    method: isMethodId(m.calculation_method) ? m.calculation_method : DEFAULT_METHOD,
-  };
-}
 
 export default async function GroupPage({
   params,
@@ -96,7 +87,12 @@ export default async function GroupPage({
       name,
       state: theirToday && isValidWindow(theirToday.window) ? theirToday.state : "unknown",
       logged: todayLog
-        ? { kind: todayLog.kind, tier: todayLog.tier, inCongregation: todayLog.in_congregation }
+        ? {
+            kind: todayLog.kind,
+            tier: todayLog.tier,
+            inCongregation: todayLog.in_congregation,
+            byOwner: Boolean(todayLog.logged_by),
+          }
         : null,
       fajrLabel:
         theirToday && loc && isValidWindow(theirToday.window)
@@ -114,6 +110,7 @@ export default async function GroupPage({
       points: inPeriod.reduce((s, l) => s + l.points, 0),
       daysPrayed: inPeriod.filter((l) => l.kind === "prayed").length,
       earlyCount: inPeriod.filter((l) => l.tier === "early").length,
+      overdueCount: inPeriod.filter((l) => l.tier === "overdue").length,
       currentStreak: stats.currentStreak,
       consistency: stats.consistency,
       loggedToday: Boolean(todayLog),
@@ -172,6 +169,20 @@ export default async function GroupPage({
         youId={profile.id}
         t={t}
       />
+
+      {isOwner && (
+        <AdminLogCard
+          locale={locale}
+          groupId={group.id}
+          today={viewerToday}
+          members={members
+            .filter((m) => m.timezone)
+            .map((m) => ({
+              id: m.user_id,
+              name: displayNameOf({ display_name: m.display_name }, t.group.anonymous),
+            }))}
+        />
+      )}
 
       <InviteBox
         code={group.invite_code}

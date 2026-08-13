@@ -228,3 +228,30 @@ test("a badge earned on a past streak is not lost when the streak breaks", () =>
   assert.equal(stats.currentStreak, 0);
   assert.equal(badgesFor(stats).find((b) => b.id === "streak7").earned, true);
 });
+
+test("a late prayer is recorded but scores nothing", () => {
+  assert.equal(pointsFor("overdue", false), 0);
+  // The congregation bonus cannot apply: that congregation prayed before sunrise.
+  assert.equal(pointsFor("overdue", true), 0);
+  assert.ok(pointsFor("late", false) > pointsFor("overdue", false));
+});
+
+test("a late prayer keeps the streak without inflating the record", () => {
+  const overdue = (date, user = "u1") => ({
+    user_id: user,
+    prayer_date: date,
+    kind: "prayed",
+    tier: "overdue",
+    in_congregation: false,
+    points: 0,
+  });
+
+  const rows = [prayed("2026-08-03", "early"), overdue("2026-08-04"), prayed("2026-08-05", "early")];
+  const stats = computeStats(rows, "2026-08-05");
+
+  assert.equal(stats.currentStreak, 3, "the streak survives a late day");
+  assert.equal(stats.daysPrayed, 3, "it was prayed, so it counts as a day");
+  assert.equal(stats.overdueCount, 1, "but it is tracked separately");
+  assert.equal(stats.earlyCount, 2, "and never counts as an on-time check-in");
+  assert.equal(stats.totalPoints, 6, "3 + 0 + 3 — the leaderboard still tells the truth");
+});

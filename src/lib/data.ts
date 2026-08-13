@@ -53,6 +53,17 @@ export function locationOf(p: Profile): PrayerLocation | null {
   };
 }
 
+/** A member's prayer location, or null if they never finished onboarding. */
+export function locationOfMember(m: Member): PrayerLocation | null {
+  if (m.latitude === null || m.longitude === null || !m.timezone) return null;
+  return {
+    latitude: m.latitude,
+    longitude: m.longitude,
+    timezone: m.timezone,
+    method: isMethodId(m.calculation_method) ? m.calculation_method : DEFAULT_METHOD,
+  };
+}
+
 export function displayNameOf(
   p: { display_name: string | null; email?: string | null },
   fallback = "Anonymous",
@@ -188,7 +199,7 @@ export async function getLogs(userIds: string[], from?: string): Promise<LogRow[
 
   let query = supabase
     .from("fajr_logs")
-    .select("user_id, prayer_date, kind, tier, in_congregation, points")
+    .select("user_id, prayer_date, kind, tier, in_congregation, points, logged_by")
     .in("user_id", userIds);
 
   if (from) query = query.gte("prayer_date", from);

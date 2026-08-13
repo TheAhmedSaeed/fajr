@@ -90,7 +90,8 @@
   "tiers": {
     "early": { "name": "First light", "note": "First third of the window" },
     "middle": { "name": "On time", "note": "Middle third" },
-    "late": { "name": "Just in time", "note": "Last third before sunrise" }
+    "late": { "name": "Just in time", "note": "Last third before sunrise" },
+    "overdue": { "name": "Late", "note": "After sunrise" }
   },
 
   "login": {
@@ -173,6 +174,11 @@
     "graceTitle": "Grace day applied",
     "graceBody": "Your streak is protected. It doesn't count as a prayer — tomorrow does.",
     "closedBody": "The sun rose at {sunrise}. Today's window has closed.",
+    "overdueHeading": "You missed the window",
+    "overdueBody": "The sun rose at {sunrise}. You can still record the prayer during the grace period, but it scores nothing.",
+    "overdueLabel": "Grace period closes in",
+    "overdueSubmit": "I prayed Fajr, late",
+    "overdueNote": "No points — but your streak survives, and your group sees that you were late.",
     "nextLabel": "Next Fajr in",
     "nextAt": "Tomorrow at {time}",
     "pts": "pts",
@@ -260,6 +266,8 @@
     "stateMissed": "Missed",
     "stateUnknown": "No location",
     "stateGrace": "Grace day",
+    "stateOverdue": "Late",
+    "loggedByOwner": "Logged by the owner",
     "stateLogged": "Logged",
     "leaderboard": "Leaderboard",
     "week": "This week",
@@ -282,6 +290,19 @@
     "deleteYes": "Yes, delete it",
     "cancel": "Cancel",
     "fajrAt": "Fajr {time}"
+  },
+
+  "adminLog": {
+    "title": "Log on behalf of a member",
+    "help": "If someone could not log at the time — no signal, dead phone — enter the time they prayed and we work out the rest. The entry is visible to everyone, with your name on it.",
+    "member": "Member",
+    "date": "Date",
+    "time": "Time they prayed",
+    "timeHelp": "In that member's own city, 24-hour clock.",
+    "congregation": "They prayed in congregation",
+    "submit": "Log for them",
+    "submitting": "Saving…",
+    "windowWas": "That day's window: {fajr} – {sunrise}"
   },
 
   "join": {
@@ -331,6 +352,14 @@
     "enterCode": "Enter an invite code.",
     "badCode": "That invite code does not match any group.",
     "missingGroup": "Missing group.",
-    "ownerCannotLeave": "You own this group. Delete it instead, or hand it over first."
+    "ownerCannotLeave": "You own this group. Delete it instead, or hand it over first.",
+    "adminNotOwner": "Only the group owner can do this.",
+    "adminNotMember": "That person is not a member of this group.",
+    "adminNoLocation": "That member has not set their city yet, so their window cannot be computed.",
+    "adminBadTime": "Enter a valid time, for example 04:35.",
+    "adminBadDate": "That date is not valid.",
+    "adminDateRange": "You can only log for today or the last {n} days.",
+    "adminOutsideWindow": "That time is outside the Fajr window for that day ({fajr} – {sunrise}) and outside the grace period after it.",
+    "adminLogged": "Logged for {name}."
   }
 }

@@ -13,12 +13,17 @@ export const TIER_POINTS: Record<Tier, number> = {
   early: 3,
   middle: 2,
   late: 1,
+  // Outside the window entirely. Recorded, never rewarded.
+  overdue: 0,
 };
 
 /** Praying in congregation is its own axis, worth a flat bonus on top of the tier. */
 export const CONGREGATION_BONUS = 2;
 
 export function pointsFor(tier: Tier, inCongregation: boolean): number {
+  // A late check-in scores nothing at all — the congregation bonus cannot
+  // rescue it, since the congregation it refers to prayed hours earlier.
+  if (tier === "overdue") return 0;
   return TIER_POINTS[tier] + (inCongregation ? CONGREGATION_BONUS : 0);
 }
 
@@ -36,6 +41,13 @@ export const GRACE_PER_MONTH = 2;
 /** How far back a grace day may reach. 1 = "yesterday only". */
 export const GRACE_LOOKBACK_DAYS = 1;
 
+/**
+ * How far back a group owner may reach when logging for a member who could
+ * not. Bounded so a well-meaning owner cannot quietly backfill a whole month
+ * of streak after the fact.
+ */
+export const ADMIN_LOG_LOOKBACK_DAYS = 7;
+
 /* ------------------------------------------------------------------ */
 /* Log rows                                                            */
 /* ------------------------------------------------------------------ */
@@ -49,6 +61,8 @@ export type LogRow = {
   tier: Tier | null;
   in_congregation: boolean;
   points: number;
+  /** The group owner who entered this on someone's behalf; null when self-logged. */
+  logged_by?: string | null;
 };
 
 export type Stats = {
@@ -57,6 +71,8 @@ export type Stats = {
   daysPrayed: number;
   totalPoints: number;
   earlyCount: number;
+  /** Days prayed but logged after sunrise. Counted, but worth nothing. */
+  overdueCount: number;
   congregationCount: number;
   graceUsed: number;
   /** 0..1, or null when the user has never logged. */
@@ -142,6 +158,7 @@ export function computeStats(rows: LogRow[], today: string): Stats {
     daysPrayed: prayed.length,
     totalPoints: rows.reduce((s, r) => s + r.points, 0),
     earlyCount: prayed.filter((r) => r.tier === "early").length,
+    overdueCount: prayed.filter((r) => r.tier === "overdue").length,
     congregationCount: prayed.filter((r) => r.in_congregation).length,
     graceUsed: rows.filter((r) => r.kind === "grace").length,
     consistency: elapsed > 0 ? Math.min(1, prayed.length / elapsed) : null,
@@ -217,6 +234,7 @@ export type LeaderboardRow = {
   points: number;
   daysPrayed: number;
   earlyCount: number;
+  overdueCount: number;
   currentStreak: number;
   consistency: number | null;
   loggedToday: boolean;
