@@ -197,13 +197,31 @@ export async function getLogs(userIds: string[], from?: string): Promise<LogRow[
   if (userIds.length === 0) return [];
   const supabase = await createClient();
 
-  let query = supabase
-    .from("fajr_logs")
-    .select("user_id, prayer_date, kind, tier, in_congregation, points, logged_by")
-    .in("user_id", userIds);
+  // Naming `logged_by` explicitly means a database without it fails the whole
+  // select — and a failed select here returns no rows at all, which reads as
+  // "nobody has ever prayed": no streak, no points, an empty board. Attribution
+  // is worth far less than the history, so it is dropped and retried.
+  const COLUMNS = "user_id, prayer_date, kind, tier, in_congregation, points";
 
-  if (from) query = query.gte("prayer_date", from);
+  const build = (columns: string) => {
+    const q = supabase.from("fajr_logs").select(columns).in("user_id", userIds);
+    return from ? q.gte("prayer_date", from) : q;
+  };
 
-  const { data } = await query;
-  return (data ?? []) as LogRow[];
+  const full = await build(`${COLUMNS}, logged_by`);
+  if (!full.error) return (full.data ?? []) as unknown as LogRow[];
+
+  console.error("[getLogs] select failed, retrying without logged_by", {
+    code: full.error.code,
+    message: full.error.message,
+  });
+
+  const reduced = await build(COLUMNS);
+  if (reduced.error) {
+    console.error("[getLogs] select failed", {
+      code: reduced.error.code,
+      message: reduced.error.message,
+    });
+  }
+  return (reduced.data ?? []) as unknown as LogRow[];
 }

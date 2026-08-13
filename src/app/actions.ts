@@ -70,6 +70,14 @@ function adminFailure(
   });
 
   const text = error?.message?.toLowerCase() ?? "";
+
+  // 23514 = check_violation, PGRST204 = column absent from the schema cache.
+  // Both mean the same thing in practice: this database predates a migration
+  // the running code assumes. Saying so beats relaying Postgres verbatim.
+  if (error?.code === "23514" || error?.code === "PGRST204") {
+    return t.errors.schemaOutdated;
+  }
+
   if (
     text.includes("invalid api key") ||
     text.includes("jwt") ||
@@ -407,7 +415,7 @@ export async function logForMember(
   const congregation = tier === "overdue" ? false : inCongregation;
   const admin = createAdminClient();
 
-  const { error } = await admin.from("fajr_logs").insert({
+  const row = {
     user_id: memberId,
     prayer_date: date,
     kind: "prayed",
@@ -416,8 +424,17 @@ export async function logForMember(
     points: pointsFor(tier, congregation),
     fajr_at: window.fajr.toISOString(),
     sunrise_at: window.sunrise.toISOString(),
-    logged_by: actor.id,
-  });
+  };
+
+  let { error } = await admin.from("fajr_logs").insert({ ...row, logged_by: actor.id });
+
+  // Without `logged_by` the entry loses its "logged by the owner" label, which
+  // is a real loss of transparency — but refusing to record the prayer at all
+  // is a worse one. Recorded, with the gap shouted into the server log.
+  if (error?.code === "PGRST204" && error.message.includes("logged_by")) {
+    console.error("[logForMember] fajr_logs.logged_by is missing — attribution not stored. Re-run supabase/schema.sql.");
+    ({ error } = await admin.from("fajr_logs").insert(row));
+  }
 
   if (error) {
     if (error.code === "23505") return { ok: false, error: t.errors.alreadyLogged };

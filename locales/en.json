@@ -330,6 +330,7 @@
   "errors": {
     "notSignedIn": "You are not signed in.",
     "serverConfig": "This could not be completed because of a server configuration problem. The details are in the server log.",
+    "schemaOutdated": "The database is missing the latest schema migration. Run supabase/schema.sql once, then try again.",
     "invalidEmail": "Enter a valid email address.",
     "magicLinkSent": "Check {email} for your sign-in link.",
     "rateLimited": "Too many emails sent in a short time. Wait a few minutes and try again.",
